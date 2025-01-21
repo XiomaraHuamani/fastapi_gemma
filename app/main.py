@@ -1,16 +1,17 @@
 from fastapi import FastAPI
-from app.db.connection import init_db
-from app.routers import auth, protected_routes
+from app.apps.users.routers import router as users_router
+from app.middlewares.cors import setup_cors
+from app.middlewares.logging import setup_logging
 
 app = FastAPI()
 
-# Inicializar la base de datos
-init_db()
+# Configurar middlewares
+setup_cors(app)
+setup_logging(app)
 
-# Registrar routers
-app.include_router(auth.router)
-app.include_router(protected_routes.router)
+# Registrar los routers
+app.include_router(users_router)
 
 @app.get("/")
 def root():
-    return {"message": "¡Bienvenido a la API con login y autenticación!"}
+    return {"message": "API Modular con FastAPI"}

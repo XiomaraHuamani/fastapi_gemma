@@ -1,8 +1,8 @@
-"""Agregar modelo de usuarios
+"""Corrigiendo conexión
 
-Revision ID: b1fb170b0312
+Revision ID: e8b70d5746e6
 Revises: 
-Create Date: 2025-01-18 13:21:49.108173
+Create Date: 2025-01-21 17:33:34.103137
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b1fb170b0312'
+revision: str = 'e8b70d5746e6'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

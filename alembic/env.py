@@ -1,23 +1,24 @@
 from logging.config import fileConfig
 from sqlalchemy import create_engine, pool
 from alembic import context
-from app.db.connection import Base, DATABASE_URL
+from app.db.connection import Base
+from app.core.config import settings  # ✅ Importamos settings correctamente
 
 # Configuración del logging
 config = context.config
 fileConfig(config.config_file_name)
 
-# Establecer la URL de conexión desde `DATABASE_URL`
-config.set_main_option("sqlalchemy.url", str(DATABASE_URL))
+# ✅ Establecer la URL de conexión usando settings.DATABASE_URL
+DATABASE_URL = settings.DATABASE_URL  # 🔥 Definimos la variable correctamente
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Metadatos de los modelos
 target_metadata = Base.metadata
 
-# 🔥 Cambiar el `engine` para que use directamente DATABASE_URL
 def run_migrations_offline():
     """Ejecutar migraciones en modo offline."""
     context.configure(
-        url=str(DATABASE_URL),  # 🔥 Aquí aseguramos que use la URL correcta
+        url=DATABASE_URL,  # ✅ Aquí usamos la variable correcta
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -27,7 +28,7 @@ def run_migrations_offline():
 
 def run_migrations_online():
     """Ejecutar migraciones en modo online."""
-    engine = create_engine(DATABASE_URL, poolclass=pool.NullPool)  # 🔥 Aquí usamos `create_engine`
+    engine = create_engine(DATABASE_URL, poolclass=pool.NullPool)  # ✅ Usamos `DATABASE_URL` correctamente
     with engine.connect() as connection:
         context.configure(
             connection=connection,
