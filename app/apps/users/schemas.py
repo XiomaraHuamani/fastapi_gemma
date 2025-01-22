@@ -1,11 +1,12 @@
 from pydantic import BaseModel, EmailStr, Field
-from app.models.user import RoleEnum
+from typing import Optional
+from app.apps.users.models import RoleEnum
 
 class RegisterRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=100)
+    username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    password: str
-    role: RoleEnum = RoleEnum.cliente
+    password: str = Field(..., min_length=6)
+    role: str = Field(default=RoleEnum.cliente.value)
 
 class LoginRequest(BaseModel):
     username: str
@@ -14,16 +15,17 @@ class LoginRequest(BaseModel):
 class UpdateUserRequest(BaseModel):
     username: str
     email: EmailStr
-    password: str = None  # Opcional, solo cambiar si se envía
-    role: RoleEnum
+    password: Optional[str] = None  # ✅ Compatible con Python 3.8
+    role: str
 
 class UserResponse(BaseModel):
     id: int
     username: str
     email: EmailStr
-    role: RoleEnum
+    role: str
 
 class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+    user: dict
+    tokens: dict
+    role: str
+    message: str

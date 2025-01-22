@@ -4,6 +4,9 @@ from alembic import context
 from app.db.connection import Base
 from app.core.config import settings  # ✅ Importamos settings correctamente
 
+# 🔥 IMPORTANTE: Importamos los modelos explícitamente para que Alembic los detecte
+from app.apps.users import models  # ✅ Esto asegurará que la tabla `users` sea incluida
+
 # Configuración del logging
 config = context.config
 fileConfig(config.config_file_name)
