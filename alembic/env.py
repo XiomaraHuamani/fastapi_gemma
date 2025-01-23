@@ -6,6 +6,7 @@ from app.core.config import settings  # ✅ Importamos settings correctamente
 
 # 🔥 IMPORTANTE: Importamos los modelos explícitamente para que Alembic los detecte
 from app.apps.users import models  # ✅ Esto asegurará que la tabla `users` sea incluida
+from app.apps.locales import models 
 
 # Configuración del logging
 config = context.config
