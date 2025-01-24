@@ -56,13 +56,18 @@ class Zona(Base):
     __tablename__ = "zonas"
 
     id = Column(Integer, primary_key=True, index=True)
-    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
+    categoria_nombre = Column(
+        String(100), 
+        ForeignKey("categorias.nombre", name="fk_zona_categoria"),  # 🔥 Se asigna nombre explícito a la FK
+        nullable=False
+    )
     codigo = Column(String(10), unique=True, nullable=False, index=True)
     linea_base = Column(Enum(LineaBaseEnum), default=LineaBaseEnum.primera_linea)
     tiene_subniveles = Column(Boolean, default=False, index=True)
 
-    categoria = relationship("Categoria", back_populates="zonas", lazy="joined")
+    categoria = relationship("Categoria", back_populates="zonas", lazy="joined", foreign_keys=[categoria_nombre])
     locales = relationship("Local", back_populates="zona", lazy="joined")
+
 
 class Metraje(Base):
     __tablename__ = "metrajes"
@@ -73,7 +78,6 @@ class Metraje(Base):
     image = Column(String(255), nullable=True)
 
     locales = relationship("Local", back_populates="metraje", lazy="joined")
-
 class Cliente(Base):
     __tablename__ = "clientes"
 

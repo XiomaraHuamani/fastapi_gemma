@@ -1,8 +1,8 @@
-"""Migración completa con locales
+"""Migración inicial0
 
-Revision ID: 50ee30433d3c
-Revises: 2e6ad76bb049
-Create Date: 2025-01-23 16:47:59.090739
+Revision ID: b59ff17de3df
+Revises: 
+Create Date: 2025-01-24 05:38:31.554358
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '50ee30433d3c'
-down_revision: Union[str, None] = '2e6ad76bb049'
+revision: str = 'b59ff17de3df'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -73,6 +73,17 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_metrajes_area'), 'metrajes', ['area'], unique=True)
     op.create_index(op.f('ix_metrajes_id'), 'metrajes', ['id'], unique=False)
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('username', sa.String(length=100), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('password', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.Enum('marketing', 'asesor', 'staff', 'cliente', name='roleenum', native_enum=False), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
+    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     op.create_table('zonas',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('categoria_id', sa.Integer(), nullable=False),
@@ -114,6 +125,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_zonas_id'), table_name='zonas')
     op.drop_index(op.f('ix_zonas_codigo'), table_name='zonas')
     op.drop_table('zonas')
+    op.drop_index(op.f('ix_users_username'), table_name='users')
+    op.drop_index(op.f('ix_users_id'), table_name='users')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
     op.drop_index(op.f('ix_metrajes_id'), table_name='metrajes')
     op.drop_index(op.f('ix_metrajes_area'), table_name='metrajes')
     op.drop_table('metrajes')
