@@ -50,9 +50,8 @@ class Categoria(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), unique=True, nullable=False, index=True)
 
-    zonas = relationship("Zona", back_populates="categoria", lazy="joined")
-
-class Zona(Base):
+    
+class Zona(Base): 
     __tablename__ = "zonas"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -62,11 +61,8 @@ class Zona(Base):
         nullable=False
     )
     codigo = Column(String(10), unique=True, nullable=False, index=True)
-    linea_base = Column(Enum(LineaBaseEnum), default=LineaBaseEnum.primera_linea)
-    tiene_subniveles = Column(Boolean, default=False, index=True)
-
-    categoria = relationship("Categoria", back_populates="zonas", lazy="joined", foreign_keys=[categoria_nombre])
-    locales = relationship("Local", back_populates="zona", lazy="joined")
+    linea_base = Column(Enum(LineaBaseEnum), default=LineaBaseEnum.primera_linea, nullable=False)
+    #tiene_subniveles = Column(Boolean, default=False, index=True)
 
 
 class Metraje(Base):
@@ -77,7 +73,6 @@ class Metraje(Base):
     perimetro = Column(String(50), nullable=False)
     image = Column(String(255), nullable=True)
 
-    locales = relationship("Local", back_populates="metraje", lazy="joined")
 class Cliente(Base):
     __tablename__ = "clientes"
 
@@ -113,21 +108,17 @@ class Cliente(Base):
     fecha_registro = Column(DateTime, default=func.now())
     monto_arras = Column(DECIMAL(10, 2), nullable=False)
 
-    locales = relationship("Local", back_populates="cliente", lazy="joined")
 
 class Local(Base):
     __tablename__ = "locales"
 
     id = Column(Integer, primary_key=True, index=True)
-    zona_id = Column(Integer, ForeignKey("zonas.id"), nullable=False)
-    metraje_id = Column(Integer, ForeignKey("metrajes.id"), nullable=False)
     estado = Column(Enum(EstadoLocalEnum), default=EstadoLocalEnum.disponible)
     precio_base = Column(DECIMAL(10, 2), nullable=False, index=True)
     tipo = Column(Enum(TipoLocalEnum), nullable=False)
 
-    subnivel_de_id = Column(Integer, ForeignKey("locales.id"), nullable=True)
-    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
+    subnivel_de = Column(String(20), unique=True, nullable=True)
 
-    zona = relationship("Zona", back_populates="locales", lazy="joined")
-    metraje = relationship("Metraje", back_populates="locales", lazy="joined")
-    cliente = relationship("Cliente", back_populates="locales", lazy="joined")
+    
+
+
