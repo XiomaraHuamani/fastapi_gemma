@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from app.db.connection import get_db
 from app.apps.locales.schemas import (
@@ -36,7 +36,6 @@ def eliminar_categoria(categoria_id: int, db: Session = Depends(get_db)):
     return {"message": "Categoría eliminada"}
 
 # ---------------------- ZONA ----------------------
-# ✅ 📌 GET - Listar todas las zonas con datos relacionados
 @router.get("/zonas", response_model=List[ZonaResponse])
 def listar_zonas(db: Session = Depends(get_db)):
     zonas = db.query(Zona).join(Categoria).all()
@@ -44,12 +43,13 @@ def listar_zonas(db: Session = Depends(get_db)):
     return [
         {
             "id": zona.id,
-            "categoria": {"nombre": zona.categoria.nombre},  # 🔥 Devuelve el nombre de la categoría
+            "categoria": {"nombre": zona.categoria.nombre},  # 🔥 Devuelve el nombre en lugar del ID
             "codigo": zona.codigo,
-            "linea_base": zona.linea_base.value  # 🔥 Convierte el Enum a string
+            "linea_base": zona.linea_base.value  # 🔥 Convierte Enum a string
         }
         for zona in zonas
     ]
+
 
 # ✅ 📌 POST - Crear una zona
 @router.post("/zonas", response_model=ZonaResponse)
@@ -58,7 +58,15 @@ def crear_zona(zona: ZonaCreate, db: Session = Depends(get_db)):
     db.add(nueva_zona)
     db.commit()
     db.refresh(nueva_zona)
-    return nueva_zona
+
+    return {
+        "id": nueva_zona.id,
+        "categoria": {"nombre": nueva_zona.categoria.nombre},  # 🔥 Devuelve el nombre en lugar del ID
+        "codigo": nueva_zona.codigo,
+        "linea_base": nueva_zona.linea_base.value
+    }
+
+
 
 # ✅ 📌 PUT - Actualizar una zona
 @router.put("/zonas/{zona_id}", response_model=ZonaResponse)

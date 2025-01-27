@@ -50,19 +50,21 @@ class Categoria(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), unique=True, nullable=False, index=True)
 
+    zonas = relationship("Zona", back_populates="categoria", foreign_keys="[Zona.categoria_id]")  # ✅ Especificar clave foránea
+
     
 class Zona(Base): 
     __tablename__ = "zonas"
 
     id = Column(Integer, primary_key=True, index=True)
-    categoria_nombre = Column(
-        String(100), 
-        ForeignKey("categorias.nombre", name="fk_zona_categoria"),  # 🔥 Se asigna nombre explícito a la FK
-        nullable=False
-    )
+    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="CASCADE"), nullable=False)  # ✅ FK correcta
+
     codigo = Column(String(10), unique=True, nullable=False, index=True)
     linea_base = Column(Enum(LineaBaseEnum), default=LineaBaseEnum.primera_linea, nullable=False)
-    #tiene_subniveles = Column(Boolean, default=False, index=True)
+
+    categoria = relationship("Categoria", back_populates="zonas")  # ✅ Relación sin conflicto
+
+
 
 
 class Metraje(Base):

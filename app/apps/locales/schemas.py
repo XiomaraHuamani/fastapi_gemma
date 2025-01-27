@@ -63,19 +63,16 @@ class CategoriaResponse(CategoriaBase):
 
 # ---------------------- ZONA ----------------------
 class ZonaBase(BaseModel):
-    categoria_id: int  # ✅ Solo el ID de la categoría
+    categoria_id: int  # ✅ Se enviará solo el ID
     codigo: str
     linea_base: LineaBaseEnum
-    tiene_subniveles: bool
 
-class ZonaCreate(BaseModel):
-    categoria_id: int
-    codigo: str
-    linea_base: LineaBaseEnum
+class ZonaCreate(ZonaBase):
+    pass
 
 class ZonaResponse(BaseModel):
     id: int
-    categoria: CategoriaBase  # 🔥 Devuelve el nombre de la categoría
+    categoria: CategoriaBase  # ✅ Devuelve el nombre de la categoría
     codigo: str
     linea_base: LineaBaseEnum
 
