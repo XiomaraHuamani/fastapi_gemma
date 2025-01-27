@@ -18,6 +18,14 @@ class EstadoLocalEnum(str, Enum):
 class TipoLocalEnum(str, Enum):
     entrada_secundaria_grupo_1_izquierda = "Entrada secundaria grupo 1 izquierda"
     entrada_secundaria_grupo_1_derecha = "Entrada secundaria grupo 1 derecha"
+    entrada_secundaria_grupo_2_izquierda = "Entrada secundaria grupo 2 izquierda"
+    entrada_secundaria_grupo_2_derecha = "Entrada secundaria grupo 2 derecha"
+    entrada_secundaria_grupo_3_izquierda = "Entrada secundaria grupo 3 izquierda"
+    entrada_secundaria_grupo_3_derecha = "Entrada secundaria grupo 3 derecha"
+    entrada_secundaria_grupo_4_izquierda = "Entrada secundaria grupo 4 izquierda"
+    entrada_secundaria_grupo_4_derecha = "Entrada secundaria grupo 4 derecha"
+    entrada_secundaria_grupo_5_izquierda = "Entrada secundaria grupo 5 izquierda"
+    entrada_secundaria_grupo_5_derecha = "Entrada secundaria grupo 5 derecha"
     entrada_grupo_1_larga = "Entrada grupo 1 larga"
     entrada_grupo_2_larga = "Entrada grupo 2 larga"
 
@@ -101,7 +109,28 @@ class MetrajeResponse(MetrajeBase):
 
 # ---------------------- CLIENTE ----------------------
 
-# 🔥 SCHEMA de Cliente con Datos Relacionados (GET)
+class ClienteCreate(BaseModel):
+    nombres_cliente: str
+    apellidos_cliente: str
+    dni_cliente: str
+    ruc_cliente: Optional[str] = None
+    ocupacion_cliente: Optional[str] = None
+    phone_cliente: str
+    direccion_cliente: str
+    mail_cliente: str
+    nombres_conyuge: str
+    dni_conyuge: str
+    metodo_separacion: MetodoSeparacionEnum
+    moneda: MonedaEnum
+    numero_operacion: Optional[str] = None
+    fecha_plazo: str
+    monto_arras: float
+    categoria_id: int
+    metraje_id: int
+    zona_id: int
+    local_id: int
+
+
 class ClienteResponse(BaseModel):
     id: int
     nombres_cliente: str
@@ -121,36 +150,13 @@ class ClienteResponse(BaseModel):
     monto_arras: float
     fecha_registro: datetime
 
-    categoria: Optional[CategoriaBase]
-    metraje: Optional[MetrajeBase]
-    zona: Optional[ZonaBase]
-    local: Optional[LocalBase]
+    categoria: CategoriaBase
+    metraje: MetrajeBase
+    zona: ZonaBase
+    local: LocalBase
 
     class Config:
         from_attributes = True
-
-# 🔥 SCHEMA para CREAR Cliente (POST)
-class ClienteCreate(BaseModel):
-    nombres_cliente: str
-    apellidos_cliente: str
-    dni_cliente: str
-    ruc_cliente: Optional[str] = None
-    ocupacion_cliente: Optional[str] = None
-    phone_cliente: str
-    direccion_cliente: str
-    mail_cliente: str
-    nombres_conyuge: str
-    dni_conyuge: str
-    metodo_separacion: MetodoSeparacionEnum
-    moneda: MonedaEnum
-    numero_operacion: Optional[str] = None
-    fecha_plazo: str
-    monto_arras: float
-
-    categoria_id: int
-    metraje_id: int
-    zona_id: int
-    local_id: int
 
 # 🔥 SCHEMA para ACTUALIZAR Cliente (PUT)
 class ClienteUpdate(BaseModel):
@@ -177,28 +183,59 @@ class ClienteUpdate(BaseModel):
 
 # ---------------------- LOCAL ----------------------
 class LocalResponse(BaseModel):
-    id: int
-    zona: ZonaBase  # 🔥 Devuelve el código de la zona
-    estado: EstadoLocalEnum
+    estado: str
     precio_base: float
-    metraje: Optional[MetrajeBase]  # 🔥 Devuelve el área, imagen y perímetro del metraje
-    subnivel_de: Optional[str]  # 🔥 Devuelve el código de la zona del subnivel
+    tipo: str
+    area: str
+    subnivel_de: Optional[str]
+    perimetro: str
+    image: Optional[str]
+    zona_codigo: str
+
+    class Config:
+        from_attributes = True  # ✅ Permite convertir SQLAlchemy a Pydantic
+
+# 📌 Esquema para creación (POST)
+class LocalCreate(BaseModel):
+    estado: str
+    precio_base: float
+    tipo: str
+    subnivel_de: Optional[str]
+    zona_id: Optional[int]
+    metraje_id: Optional[int]
+
+# 📌 Esquema para actualización (PUT)
+class LocalUpdate(BaseModel):
+    estado: Optional[EstadoLocalEnum] = None
+    precio_base: Optional[float] = None
+    tipo: Optional[TipoLocalEnum] = None
+    subnivel_de: Optional[str] = None
+    zona_id: Optional[int] = None
+    metraje_id: Optional[int] = None
+
+
+
+# ---------------------- LOCAL-grupos ----------------------
+
+
+class LocalSchema(BaseModel):
+    zona_codigo: str
+    precio: str
+    estado: str
+    area: Optional[str] = None
+    perimetro: Optional[str] = None
+    image: Optional[str] = None
+    linea_base: str
+    subniveles: Optional[List["LocalSchema"]] = None  # ✅ Subniveles recursivos
 
     class Config:
         from_attributes = True
 
-# 🔥 Esquema para CREAR un Local (POST)
-class LocalCreate(BaseModel):
-    zona_id: int
-    estado: EstadoLocalEnum
-    precio_base: float
-    metraje_id: int
-    subnivel_de: Optional[str] = None  # Opcional
+# ✅ Modelo para los grupos de locales
+class GrupoLocalesSchema(BaseModel):
+    tipo: str
+    locales: List[LocalSchema]
 
-# 🔥 Esquema para ACTUALIZAR un Local (PUT)
-class LocalUpdate(BaseModel):
-    zona_id: Optional[int] = None
-    estado: Optional[EstadoLocalEnum] = None
-    precio_base: Optional[float] = None
-    metraje_id: Optional[int] = None
-    subnivel_de: Optional[str] = None
+# ✅ Modelo de respuesta que contiene los grupos
+class ResponseGrupoLocales(BaseModel):
+    grupos: List[GrupoLocalesSchema]

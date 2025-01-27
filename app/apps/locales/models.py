@@ -50,8 +50,8 @@ class Categoria(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), unique=True, nullable=False, index=True)
 
-    zonas = relationship("Zona", back_populates="categoria", foreign_keys="[Zona.categoria_id]")  # ✅ Especificar clave foránea
-
+    zonas = relationship("Zona", back_populates="categoria", foreign_keys="Zona.categoria_id")  # ✅ Clave foránea corregida
+    clientes = relationship("Cliente", back_populates="categoria")
     
 class Zona(Base): 
     __tablename__ = "zonas"
@@ -62,7 +62,9 @@ class Zona(Base):
     codigo = Column(String(10), unique=True, nullable=False, index=True)
     linea_base = Column(Enum(LineaBaseEnum), default=LineaBaseEnum.primera_linea, nullable=False)
 
-    categoria = relationship("Categoria", back_populates="zonas")  # ✅ Relación sin conflicto
+    categoria = relationship("Categoria", back_populates="zonas")
+    locales = relationship("Local", back_populates="zona")
+    clientes = relationship("Cliente", back_populates="zona")  # ✅ Relación añadida
 
 
 
@@ -74,6 +76,9 @@ class Metraje(Base):
     area = Column(String(50),unique=True, nullable=False, index=True)
     perimetro = Column(String(50), nullable=False)
     image = Column(String(255), nullable=True)
+
+    locales = relationship("Local", back_populates="metraje")
+    clientes = relationship("Cliente", back_populates="metraje") 
 
 class Cliente(Base):
     __tablename__ = "clientes"
@@ -110,6 +115,18 @@ class Cliente(Base):
     fecha_registro = Column(DateTime, default=func.now())
     monto_arras = Column(DECIMAL(10, 2), nullable=False)
 
+    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
+    metraje_id = Column(Integer, ForeignKey("metrajes.id"), nullable=False)
+    zona_id = Column(Integer, ForeignKey("zonas.id"), nullable=False)
+    local_id = Column(Integer, ForeignKey("locales.id", ondelete="SET NULL"), nullable=True)  # ✅ Clave foránea opcional
+
+    categoria = relationship("Categoria", back_populates="clientes")
+    metraje = relationship("Metraje", back_populates="clientes")
+    zona = relationship("Zona", back_populates="clientes")
+    local = relationship("Local", back_populates="clientes")  # ✅ Se mantiene la relación inversa
+
+
+
 
 class Local(Base):
     __tablename__ = "locales"
@@ -121,6 +138,12 @@ class Local(Base):
 
     subnivel_de = Column(String(20), unique=True, nullable=True)
 
-    
+    zona_id = Column(Integer, ForeignKey("zonas.id", ondelete="SET NULL"), nullable=True)
+    metraje_id = Column(Integer, ForeignKey("metrajes.id", ondelete="SET NULL"), nullable=True)
+
+    zona = relationship("Zona", back_populates="locales")
+    metraje = relationship("Metraje", back_populates="locales")
+
+    clientes = relationship("Cliente", back_populates="local")
 
 

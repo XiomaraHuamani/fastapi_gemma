@@ -1,8 +1,8 @@
-"""Corrección
+"""Inicio
 
-Revision ID: 6e045722d8d1
+Revision ID: c7b0e30a5546
 Revises: 
-Create Date: 2025-01-24 17:39:08.512659
+Create Date: 2025-01-27 15:28:49.428737
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6e045722d8d1'
+revision: str = 'c7b0e30a5546'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,6 +27,51 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_categorias_id'), 'categorias', ['id'], unique=False)
     op.create_index(op.f('ix_categorias_nombre'), 'categorias', ['nombre'], unique=True)
+    op.create_table('metrajes',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('area', sa.String(length=50), nullable=False),
+    sa.Column('perimetro', sa.String(length=50), nullable=False),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_metrajes_area'), 'metrajes', ['area'], unique=True)
+    op.create_index(op.f('ix_metrajes_id'), 'metrajes', ['id'], unique=False)
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('username', sa.String(length=100), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('password', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.Enum('marketing', 'asesor', 'staff', 'cliente', name='roleenum', native_enum=False), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
+    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
+    op.create_table('zonas',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('categoria_id', sa.Integer(), nullable=False),
+    sa.Column('codigo', sa.String(length=10), nullable=False),
+    sa.Column('linea_base', sa.Enum('primera_linea', 'segunda_linea', 'tercera_linea', name='lineabaseenum'), nullable=False),
+    sa.ForeignKeyConstraint(['categoria_id'], ['categorias.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_zonas_codigo'), 'zonas', ['codigo'], unique=True)
+    op.create_index(op.f('ix_zonas_id'), 'zonas', ['id'], unique=False)
+    op.create_table('locales',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('estado', sa.Enum('disponible', 'reservado', 'vendido', name='estadolocalenum'), nullable=True),
+    sa.Column('precio_base', sa.DECIMAL(precision=10, scale=2), nullable=False),
+    sa.Column('tipo', sa.Enum('entrada_secundaria_grupo_1_izquierda', 'entrada_secundaria_grupo_1_derecha', 'entrada_secundaria_grupo_2_izquierda', 'entrada_secundaria_grupo_2_derecha', 'entrada_secundaria_grupo_3_izquierda', 'entrada_secundaria_grupo_3_derecha', 'entrada_secundaria_grupo_4_izquierda', 'entrada_secundaria_grupo_4_derecha', 'entrada_secundaria_grupo_5_izquierda', 'entrada_secundaria_grupo_5_derecha', 'entrada_grupo_1_larga', 'entrada_grupo_2_larga', name='tipolocalenum'), nullable=False),
+    sa.Column('subnivel_de', sa.String(length=20), nullable=True),
+    sa.Column('zona_id', sa.Integer(), nullable=True),
+    sa.Column('metraje_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['metraje_id'], ['metrajes.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['zona_id'], ['zonas.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('subnivel_de')
+    )
+    op.create_index(op.f('ix_locales_id'), 'locales', ['id'], unique=False)
+    op.create_index(op.f('ix_locales_precio_base'), 'locales', ['precio_base'], unique=False)
     op.create_table('clientes',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombres_cliente', sa.String(length=100), nullable=False),
@@ -56,6 +101,14 @@ def upgrade() -> None:
     sa.Column('fecha_plazo', sa.String(length=50), nullable=False),
     sa.Column('fecha_registro', sa.DateTime(), nullable=True),
     sa.Column('monto_arras', sa.DECIMAL(precision=10, scale=2), nullable=False),
+    sa.Column('categoria_id', sa.Integer(), nullable=False),
+    sa.Column('metraje_id', sa.Integer(), nullable=False),
+    sa.Column('zona_id', sa.Integer(), nullable=False),
+    sa.Column('local_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['categoria_id'], ['categorias.id'], ),
+    sa.ForeignKeyConstraint(['local_id'], ['locales.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['metraje_id'], ['metrajes.id'], ),
+    sa.ForeignKeyConstraint(['zona_id'], ['zonas.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('dni_cliente'),
     sa.UniqueConstraint('dni_conyuge'),
@@ -64,52 +117,16 @@ def upgrade() -> None:
     sa.UniqueConstraint('ruc_copropietario')
     )
     op.create_index(op.f('ix_clientes_id'), 'clientes', ['id'], unique=False)
-    op.create_table('locales',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('estado', sa.Enum('disponible', 'reservado', 'vendido', name='estadolocalenum'), nullable=True),
-    sa.Column('precio_base', sa.DECIMAL(precision=10, scale=2), nullable=False),
-    sa.Column('tipo', sa.Enum('entrada_secundaria_grupo_1_izquierda', 'entrada_secundaria_grupo_1_derecha', 'entrada_secundaria_grupo_2_izquierda', 'entrada_secundaria_grupo_2_derecha', 'entrada_secundaria_grupo_3_izquierda', 'entrada_secundaria_grupo_3_derecha', 'entrada_secundaria_grupo_4_izquierda', 'entrada_secundaria_grupo_4_derecha', 'entrada_secundaria_grupo_5_izquierda', 'entrada_secundaria_grupo_5_derecha', 'entrada_grupo_1_larga', 'entrada_grupo_2_larga', name='tipolocalenum'), nullable=False),
-    sa.Column('subnivel_de', sa.String(length=20), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('subnivel_de')
-    )
-    op.create_index(op.f('ix_locales_id'), 'locales', ['id'], unique=False)
-    op.create_index(op.f('ix_locales_precio_base'), 'locales', ['precio_base'], unique=False)
-    op.create_table('metrajes',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('area', sa.String(length=50), nullable=False),
-    sa.Column('perimetro', sa.String(length=50), nullable=False),
-    sa.Column('image', sa.String(length=255), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_metrajes_area'), 'metrajes', ['area'], unique=True)
-    op.create_index(op.f('ix_metrajes_id'), 'metrajes', ['id'], unique=False)
-    op.create_table('users',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('username', sa.String(length=100), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('password', sa.String(length=255), nullable=False),
-    sa.Column('role', sa.Enum('marketing', 'asesor', 'staff', 'cliente', name='roleenum', native_enum=False), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
-    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
-    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
-    op.create_table('zonas',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('categoria_nombre', sa.String(length=100), nullable=False),
-    sa.Column('codigo', sa.String(length=10), nullable=False),
-    sa.Column('linea_base', sa.Enum('primera_linea', 'segunda_linea', 'tercera_linea', name='lineabaseenum'), nullable=False),
-    sa.ForeignKeyConstraint(['categoria_nombre'], ['categorias.nombre'], name='fk_zona_categoria'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_zonas_codigo'), 'zonas', ['codigo'], unique=True)
-    op.create_index(op.f('ix_zonas_id'), 'zonas', ['id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_clientes_id'), table_name='clientes')
+    op.drop_table('clientes')
+    op.drop_index(op.f('ix_locales_precio_base'), table_name='locales')
+    op.drop_index(op.f('ix_locales_id'), table_name='locales')
+    op.drop_table('locales')
     op.drop_index(op.f('ix_zonas_id'), table_name='zonas')
     op.drop_index(op.f('ix_zonas_codigo'), table_name='zonas')
     op.drop_table('zonas')
@@ -120,11 +137,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_metrajes_id'), table_name='metrajes')
     op.drop_index(op.f('ix_metrajes_area'), table_name='metrajes')
     op.drop_table('metrajes')
-    op.drop_index(op.f('ix_locales_precio_base'), table_name='locales')
-    op.drop_index(op.f('ix_locales_id'), table_name='locales')
-    op.drop_table('locales')
-    op.drop_index(op.f('ix_clientes_id'), table_name='clientes')
-    op.drop_table('clientes')
     op.drop_index(op.f('ix_categorias_nombre'), table_name='categorias')
     op.drop_index(op.f('ix_categorias_id'), table_name='categorias')
     op.drop_table('categorias')
