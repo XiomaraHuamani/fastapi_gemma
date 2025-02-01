@@ -45,9 +45,9 @@ def listar_zonas(db: Session = Depends(get_db)):
     return [
         {
             "id": zona.id,
-            "categoria": {"nombre": zona.categoria.nombre},  # 🔥 Devuelve el nombre en lugar del ID
+            "categoria": {"nombre": zona.categoria.nombre},  
             "codigo": zona.codigo,
-            "linea_base": zona.linea_base.value  # 🔥 Convierte Enum a string
+            "linea_base": zona.linea_base.value  
         }
         for zona in zonas
     ]
@@ -159,73 +159,133 @@ def eliminar_cliente(cliente_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------- LOCAL ----------------------
-@router.get("/locales", response_model=List[LocalResponse])
-def listar_locales(db: Session = Depends(get_db)):
-    locales = (
-        db.query(Local, Metraje.area, Metraje.perimetro, Metraje.image, Zona.codigo)
-        .join(Metraje, Local.metraje_id == Metraje.id, isouter=True)
-        .join(Zona, Local.zona_id == Zona.id, isouter=True)
-        .all()
-    )
+# @router.get("/locales", response_model=List[LocalResponse])
+# def listar_locales(db: Session = Depends(get_db)):
+#     locales = (
+#         db.query(Local, Metraje.area, Metraje.perimetro, Metraje.image, Zona.codigo)
+#         .join(Metraje, Local.metraje_id == Metraje.id, isouter=True)
+#         .join(Zona, Local.zona_id == Zona.id, isouter=True)
+#         .all()
+#     )
 
-    return [
-        {
-            "estado": local.Local.estado.value,
-            "precio_base": float(local.Local.precio_base),
-            "tipo": local.Local.tipo.value,
-            "area": local.area if local.area else "N/A",
-            "subnivel_de": local.Local.subnivel_de,
-            "perimetro": local.perimetro if local.perimetro else "N/A",
-            "image": local.image if local.image else "https://via.placeholder.com/150",
-            "zona_codigo": local.codigo if local.codigo else "N/A"
-        }
-        for local in locales
-    ]
+#     return [
+#         {
+#             "zona_codigo": local.codigo if local.codigo else "N/A",
+#             "estado": local.Local.estado.value,
+#             "precio_base": float(local.Local.precio_base),
+#             "tipo": local.Local.tipo.value,
+#             "area": local.area if local.area else "N/A",
+#             # "categoria": {"nombre": zona.categoria.nombre}, 
+#             #"subnivel_de": local.Local.subnivel_de,
+#             "subnivel_de": {"codigo":local.zona.codigo},
+#             "perimetro": local.perimetro if local.perimetro else "N/A",
+#             "image": local.image if local.image else "https://via.placeholder.com/150",
+#         }
+#         for local in locales
+#     ]
 
-@router.get("/locales/{local_id}", response_model=LocalResponse)
-def obtener_local(local_id: int, db: Session = Depends(get_db)):
-    local = (
-        db.query(Local, Metraje.area, Metraje.perimetro, Metraje.image, Zona.codigo)
-        .join(Metraje, Local.metraje_id == Metraje.id, isouter=True)
-        .join(Zona, Local.zona_id == Zona.id, isouter=True)
-        .filter(Local.id == local_id)
-        .first()
-    )
+@router.get("/locales/", response_model=List[dict])
+def get_locales(db: Session = Depends(get_db)):
+    locales = db.query(Local).all()
+    
+    # ✅ Formateamos cada local exactamente como en el POST
+    response_data = []
+    for local in locales:
+        response_data.append({
+            "zona_codigo": local.zona.codigo if local.zona else None,
+            "estado": local.estado.value,
+            "precio_base": local.precio_base,
+            "tipo": local.tipo.value,
+            "subnivel_de": {
+                "categoria_id": local.zona.categoria_id if local.zona else None,
+                "codigo": local.zona.codigo if local.zona else None,
+                "linea_base": local.zona.linea_base.value if local.zona else None
+            } if local.zona else None,
+            "metraje": {
+                "area": local.metraje.area if local.metraje else None,
+                "perimetro": local.metraje.perimetro if local.metraje else None,
+                "image": local.metraje.image if local.metraje else None
+            } if local.metraje else None
+        })
 
+    return response_data
+
+
+
+
+@router.get("/locales/{local_id}", response_model=dict)
+def get_local(local_id: int, db: Session = Depends(get_db)):
+    local = db.query(Local).filter(Local.id == local_id).first()
     if not local:
         raise HTTPException(status_code=404, detail="Local no encontrado")
-
+    
+    # ✅ Formateamos la respuesta para que coincida con el POST
     return {
-        "estado": local.Local.estado.value,
-        "precio_base": float(local.Local.precio_base),
-        "tipo": local.Local.tipo.value,
-        "area": local.area if local.area else "N/A",
-        "subnivel_de": local.Local.subnivel_de,
-        "perimetro": local.perimetro if local.perimetro else "N/A",
-        "image": local.image if local.image else "https://via.placeholder.com/150",
-        "zona_codigo": local.codigo if local.codigo else "N/A"
+        "zona_codigo": local.zona.codigo if local.zona else None,
+        "estado": local.estado.value,
+        "precio_base": local.precio_base,
+        "tipo": local.tipo.value,
+        "subnivel_de": {
+            "categoria_id": local.zona.categoria_id if local.zona else None,
+            "codigo": local.zona.codigo if local.zona else None,
+            "linea_base": local.zona.linea_base.value if local.zona else None
+        } if local.zona else None,
+        "metraje": {
+            "area": local.metraje.area if local.metraje else None,
+            "perimetro": local.metraje.perimetro if local.metraje else None,
+            "image": local.metraje.image if local.metraje else None
+        } if local.metraje else None
     }
 
-# ✅ 📌 POST - Crear un local
-@router.post("/locales", response_model=LocalResponse)
-def crear_local(local_data: LocalCreate, db: Session = Depends(get_db)):
-    zona = db.query(Zona).filter(Zona.id == local_data.zona_id).first() if local_data.zona_id else None
-    metraje = db.query(Metraje).filter(Metraje.id == local_data.metraje_id).first() if local_data.metraje_id else None
 
-    nuevo_local = Local(
-        estado=local_data.estado,
-        precio_base=local_data.precio_base,
-        tipo=local_data.tipo,
-        subnivel_de=local_data.subnivel_de,
-        zona_id=zona.id if zona else None,
-        metraje_id=metraje.id if metraje else None
+
+@router.post("/locales/", response_model=dict)
+def create_local(local: LocalCreate, db: Session = Depends(get_db)):
+    # Verificar si la zona existe
+    zona = db.query(Zona).filter(Zona.id == local.zona_id).first() if local.zona_id else None
+    if local.zona_id and not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    # Verificar si el metraje existe
+    metraje = db.query(Metraje).filter(Metraje.id == local.metraje_id).first() if local.metraje_id else None
+    if local.metraje_id and not metraje:
+        raise HTTPException(status_code=404, detail="Metraje no encontrado")
+
+    # Crear el objeto Local
+    new_local = Local(
+        estado=local.estado,
+        precio_base=local.precio_base,
+        tipo=local.tipo,
+        subnivel_de=local.subnivel_de,
+        zona_id=local.zona_id,
+        metraje_id=local.metraje_id
     )
 
-    db.add(nuevo_local)
+    db.add(new_local)
     db.commit()
-    db.refresh(nuevo_local)
+    db.refresh(new_local)
 
-    return obtener_local(nuevo_local.id, db)
+    # ✅ Formateamos la respuesta exactamente como la necesitas
+    response_data = {
+        "zona_codigo": new_local.zona.codigo if new_local.zona else None,
+        "estado": new_local.estado.value,
+        "precio_base": new_local.precio_base,
+        "tipo": new_local.tipo.value,
+        "subnivel_de": {
+            "categoria_id": new_local.zona.categoria_id if new_local.zona else None,
+            "codigo": new_local.zona.codigo if new_local.zona else None,
+            "linea_base": new_local.zona.linea_base.value if new_local.zona else None
+        } if new_local.zona else None,
+        "metraje": {
+            "area": new_local.metraje.area if new_local.metraje else None,
+            "perimetro": new_local.metraje.perimetro if new_local.metraje else None,
+            "image": new_local.metraje.image if new_local.metraje else None
+        } if new_local.metraje else None
+    }
+
+    return response_data
+
+
 
 # ✅ 📌 PUT - Actualizar un local
 @router.put("/locales/{local_id}", response_model=LocalResponse)

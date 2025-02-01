@@ -187,6 +187,7 @@ class LocalResponse(BaseModel):
     precio_base: float
     tipo: str
     area: str
+    zona: ZonaBase
     subnivel_de: Optional[str]
     perimetro: str
     image: Optional[str]

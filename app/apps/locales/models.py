@@ -57,14 +57,14 @@ class Zona(Base):
     __tablename__ = "zonas"
 
     id = Column(Integer, primary_key=True, index=True)
-    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="CASCADE"), nullable=False)  # ✅ FK correcta
+    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="CASCADE"), nullable=False)  
 
     codigo = Column(String(10), unique=True, nullable=False, index=True)
     linea_base = Column(Enum(LineaBaseEnum), default=LineaBaseEnum.primera_linea, nullable=False)
 
     categoria = relationship("Categoria", back_populates="zonas")
     locales = relationship("Local", back_populates="zona")
-    clientes = relationship("Cliente", back_populates="zona")  # ✅ Relación añadida
+    clientes = relationship("Cliente", back_populates="zona")  
 
 
 
