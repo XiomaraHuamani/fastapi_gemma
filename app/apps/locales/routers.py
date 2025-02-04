@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 from fastapi.encoders import jsonable_encoder
 from typing import List
@@ -117,45 +118,245 @@ def eliminar_metraje(metraje_id: int, db: Session = Depends(get_db)):
     return {"message": "Metraje eliminado"}
 
 # ---------------------- CLIENTE ----------------------
-@router.get("/clientes", response_model=List[ClienteResponse])
-def listar_clientes(db: Session = Depends(get_db)):
-    clientes = db.query(Cliente).join(Categoria).join(Metraje).join(Zona).join(Local).all()
+@router.get("/clientes/", response_model=List[dict])
+def get_clientes(db: Session = Depends(get_db)):
+    clientes = db.query(Cliente).all()
+    
+    # ✅ Formateamos cada cliente exactamente como en el POST
+    response_data = []
+    for cliente in clientes:
+        response_data.append({
+            "id": cliente.id,
+            "nombres_cliente": cliente.nombres_cliente,
+            "apellidos_cliente": cliente.apellidos_cliente,
+            "dni_cliente": cliente.dni_cliente,
+            "ruc_cliente": cliente.ruc_cliente,
+            "ocupacion_cliente": cliente.ocupacion_cliente,
+            "phone_cliente": cliente.phone_cliente,
+            "direccion_cliente": cliente.direccion_cliente,
+            "mail_cliente": cliente.mail_cliente,
+            "nombres_conyuge": cliente.nombres_conyuge,
+            "dni_conyuge": cliente.dni_conyuge,
+            "metodo_separacion": cliente.metodo_separacion.value,
+            "moneda": cliente.moneda.value,
+            "numero_operacion": cliente.numero_operacion,
+            "fecha_plazo": cliente.fecha_plazo,
+            "monto_arras": cliente.monto_arras,
+            "fecha_registro": cliente.fecha_registro.isoformat(),
+            "local": {
+                "zona_codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
+                "estado": cliente.local.estado.value if cliente.local else None,
+                "precio_base": str(cliente.local.precio_base) if cliente.local else None,
+                "tipo": cliente.local.tipo.value if cliente.local else None,
+                "subnivel_de": {
+                    "categoria_id": cliente.local.zona.categoria_id if cliente.local and cliente.local.zona else None,
+                    "codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
+                    "linea_base": cliente.local.zona.linea_base.value if cliente.local and cliente.local.zona else None
+                } if cliente.local and cliente.local.zona else None,
+                "metraje": {
+                    "area": cliente.local.metraje.area if cliente.local and cliente.local.metraje else None,
+                    "perimetro": cliente.local.metraje.perimetro if cliente.local and cliente.local.metraje else None,
+                    "image": cliente.local.metraje.image if cliente.local and cliente.local.metraje else None
+                } if cliente.local and cliente.local.metraje else None
+            } if cliente.local else None
+        })
 
-    return clientes
+    return response_data
 
+@router.get("/clientes/{cliente_id}", response_model=dict)
+def get_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # ✅ Formateamos la respuesta para que coincida con el JSON esperado
+    return {
+        "id": cliente.id,
+        "nombres_cliente": cliente.nombres_cliente,
+        "apellidos_cliente": cliente.apellidos_cliente,
+        "dni_cliente": cliente.dni_cliente,
+        "ruc_cliente": cliente.ruc_cliente,
+        "ocupacion_cliente": cliente.ocupacion_cliente,
+        "phone_cliente": cliente.phone_cliente,
+        "direccion_cliente": cliente.direccion_cliente,
+        "mail_cliente": cliente.mail_cliente,
+        "nombres_conyuge": cliente.nombres_conyuge,
+        "dni_conyuge": cliente.dni_conyuge,
+        "metodo_separacion": cliente.metodo_separacion.value,
+        "moneda": cliente.moneda.value,
+        "numero_operacion": cliente.numero_operacion,
+        "fecha_plazo": cliente.fecha_plazo,
+        "monto_arras": cliente.monto_arras,
+        "fecha_registro": cliente.fecha_registro.isoformat(),
+        "local": {
+            "zona_codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
+            "estado": cliente.local.estado.value if cliente.local else None,
+            "precio_base": str(cliente.local.precio_base) if cliente.local else None,
+            "tipo": cliente.local.tipo.value if cliente.local else None,
+            "subnivel_de": {
+                "categoria_id": cliente.local.zona.categoria_id if cliente.local and cliente.local.zona else None,
+                "codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
+                "linea_base": cliente.local.zona.linea_base.value if cliente.local and cliente.local.zona else None
+            } if cliente.local and cliente.local.zona else None,
+            "metraje": {
+                "area": cliente.local.metraje.area if cliente.local and cliente.local.metraje else None,
+                "perimetro": cliente.local.metraje.perimetro if cliente.local and cliente.local.metraje else None,
+                "image": cliente.local.metraje.image if cliente.local and cliente.local.metraje else None
+            } if cliente.local and cliente.local.metraje else None
+        } if cliente.local else None
+    }
 
-@router.post("/clientes", response_model=ClienteResponse)
-def crear_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db)):
-    nuevo_cliente = Cliente(**cliente_data.dict())
-    db.add(nuevo_cliente)
+@router.post("/clientes/", response_model=dict)
+def create_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
+    # Verificar si la categoría existe
+    categoria = db.query(Categoria).filter(Categoria.id == cliente.categoria_id).first()
+    if not categoria:
+        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+
+    # Verificar si la zona existe
+    zona = db.query(Zona).filter(Zona.id == cliente.zona_id).first()
+    if not zona:
+        raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    # Verificar si el metraje existe
+    metraje = db.query(Metraje).filter(Metraje.id == cliente.metraje_id).first()
+    if not metraje:
+        raise HTTPException(status_code=404, detail="Metraje no encontrado")
+
+    # Verificar si el local existe
+    local = db.query(Local).filter(Local.id == cliente.local_id).first()
+    if not local:
+        raise HTTPException(status_code=404, detail="Local no encontrado")
+
+    # Crear el objeto Cliente con fecha_registro incluida
+    new_cliente = Cliente(
+        **cliente.dict(),
+        fecha_registro=datetime.utcnow()  # ✅ Ahora sí funciona correctamente
+    )
+
+    db.add(new_cliente)
     db.commit()
-    db.refresh(nuevo_cliente)
-    return nuevo_cliente
+    db.refresh(new_cliente)
+
+    # ✅ Retornar la respuesta en el formato correcto
+    return {
+        "id": new_cliente.id,
+        "nombres_cliente": new_cliente.nombres_cliente,
+        "apellidos_cliente": new_cliente.apellidos_cliente,
+        "dni_cliente": new_cliente.dni_cliente,
+        "ruc_cliente": new_cliente.ruc_cliente,
+        "ocupacion_cliente": new_cliente.ocupacion_cliente,
+        "phone_cliente": new_cliente.phone_cliente,
+        "direccion_cliente": new_cliente.direccion_cliente,
+        "mail_cliente": new_cliente.mail_cliente,
+        "nombres_conyuge": new_cliente.nombres_conyuge,
+        "dni_conyuge": new_cliente.dni_conyuge,
+        "metodo_separacion": new_cliente.metodo_separacion.value,
+        "moneda": new_cliente.moneda.value,
+        "numero_operacion": new_cliente.numero_operacion,
+        "fecha_plazo": new_cliente.fecha_plazo,
+        "monto_arras": new_cliente.monto_arras,
+        "fecha_registro": new_cliente.fecha_registro.isoformat(),
+        "local": {
+            "zona_codigo": local.zona.codigo if local.zona else None,
+            "estado": local.estado.value,
+            "precio_base": str(local.precio_base),
+            "tipo": local.tipo.value,
+            "subnivel_de": {
+                "categoria_id": local.zona.categoria_id if local.zona else None,
+                "codigo": local.zona.codigo if local.zona else None,
+                "linea_base": local.zona.linea_base.value if local.zona else None
+            } if local.zona else None,
+            "metraje": {
+                "area": local.metraje.area if local.metraje else None,
+                "perimetro": local.metraje.perimetro if local.metraje else None,
+                "image": local.metraje.image if local.metraje else None
+            } if local.metraje else None
+        }
+    }
 
 
-@router.put("/clientes/{cliente_id}", response_model=ClienteResponse)
-def actualizar_cliente(cliente_id: int, cliente_data: ClienteCreate, db: Session = Depends(get_db)):
+@router.put("/clientes/{cliente_id}", response_model=dict)
+def update_cliente(cliente_id: int, cliente_update: ClienteUpdate, db: Session = Depends(get_db)):
+    # Buscar el cliente en la base de datos
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-    for key, value in cliente_data.dict(exclude_unset=True).items():
+    # Verificar si la zona, metraje o local han cambiado y existen
+    if cliente_update.zona_id:
+        zona = db.query(Zona).filter(Zona.id == cliente_update.zona_id).first()
+        if not zona:
+            raise HTTPException(status_code=404, detail="Zona no encontrada")
+
+    if cliente_update.metraje_id:
+        metraje = db.query(Metraje).filter(Metraje.id == cliente_update.metraje_id).first()
+        if not metraje:
+            raise HTTPException(status_code=404, detail="Metraje no encontrado")
+
+    if cliente_update.local_id:
+        local = db.query(Local).filter(Local.id == cliente_update.local_id).first()
+        if not local:
+            raise HTTPException(status_code=404, detail="Local no encontrado")
+
+    # Actualizar solo los campos enviados
+    for key, value in cliente_update.dict(exclude_unset=True).items():
         setattr(cliente, key, value)
 
     db.commit()
     db.refresh(cliente)
-    return cliente
+
+    # ✅ Retornar el formato corregido
+    return {
+        "id": cliente.id,
+        "nombres_cliente": cliente.nombres_cliente,
+        "apellidos_cliente": cliente.apellidos_cliente,
+        "dni_cliente": cliente.dni_cliente,
+        "ruc_cliente": cliente.ruc_cliente,
+        "ocupacion_cliente": cliente.ocupacion_cliente,
+        "phone_cliente": cliente.phone_cliente,
+        "direccion_cliente": cliente.direccion_cliente,
+        "mail_cliente": cliente.mail_cliente,
+        "nombres_conyuge": cliente.nombres_conyuge,
+        "dni_conyuge": cliente.dni_conyuge,
+        "metodo_separacion": cliente.metodo_separacion.value,
+        "moneda": cliente.moneda.value,
+        "numero_operacion": cliente.numero_operacion,
+        "fecha_plazo": cliente.fecha_plazo,
+        "monto_arras": cliente.monto_arras,
+        "fecha_registro": cliente.fecha_registro.isoformat(),
+        "local": {
+            "zona_codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
+            "estado": cliente.local.estado.value if cliente.local else None,
+            "precio_base": str(cliente.local.precio_base) if cliente.local else None,
+            "tipo": cliente.local.tipo.value if cliente.local else None,
+            "subnivel_de": {
+                "categoria_id": cliente.local.zona.categoria_id if cliente.local and cliente.local.zona else None,
+                "codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
+                "linea_base": cliente.local.zona.linea_base.value if cliente.local and cliente.local.zona else None
+            } if cliente.local and cliente.local.zona else None,
+            "metraje": {
+                "area": cliente.local.metraje.area if cliente.local and cliente.local.metraje else None,
+                "perimetro": cliente.local.metraje.perimetro if cliente.local and cliente.local.metraje else None,
+                "image": cliente.local.metraje.image if cliente.local and cliente.local.metraje else None
+            } if cliente.local and cliente.local.metraje else None
+        } if cliente.local else None
+    }
 
 
-@router.delete("/clientes/{cliente_id}")
-def eliminar_cliente(cliente_id: int, db: Session = Depends(get_db)):
+
+@router.delete("/clientes/{cliente_id}", response_model=dict)
+def delete_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    # Buscar el cliente en la base de datos
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     db.delete(cliente)
     db.commit()
-    return {"message": "Cliente eliminado"}
+    
+    return {"message": "Cliente eliminado exitosamente"}
+
 
 
 # ---------------------- LOCAL ----------------------

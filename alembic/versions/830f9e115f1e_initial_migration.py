@@ -1,8 +1,8 @@
-"""Inicio
+"""Initial migration
 
-Revision ID: c7b0e30a5546
+Revision ID: 830f9e115f1e
 Revises: 
-Create Date: 2025-01-27 15:28:49.428737
+Create Date: 2025-02-04 16:14:19.649516
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c7b0e30a5546'
+revision: str = '830f9e115f1e'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -76,29 +76,29 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombres_cliente', sa.String(length=100), nullable=False),
     sa.Column('apellidos_cliente', sa.String(length=100), nullable=False),
-    sa.Column('dni_cliente', sa.String(length=20), nullable=False),
-    sa.Column('ruc_cliente', sa.String(length=20), nullable=True),
+    sa.Column('dni_cliente', sa.Integer(), nullable=False),
+    sa.Column('ruc_cliente', sa.Integer(), nullable=True),
     sa.Column('f_nacimiento_cliente', sa.DateTime(), nullable=False),
-    sa.Column('ocupacion_cliente', sa.String(length=100), nullable=True),
-    sa.Column('phone_cliente', sa.String(length=20), nullable=False),
-    sa.Column('direccion_cliente', sa.String(length=255), nullable=False),
-    sa.Column('mail_cliente', sa.String(length=100), nullable=False),
-    sa.Column('nombres_copropietario', sa.String(length=100), nullable=False),
-    sa.Column('apellidos_copropietario', sa.String(length=100), nullable=False),
-    sa.Column('dni_copropietario', sa.String(length=20), nullable=True),
-    sa.Column('ruc_copropietario', sa.String(length=20), nullable=True),
-    sa.Column('f_nacimiento_copropietario', sa.DateTime(), nullable=False),
-    sa.Column('ocupacion_copropietario', sa.String(length=100), nullable=True),
-    sa.Column('phone_copropietario', sa.String(length=20), nullable=True),
-    sa.Column('direccion_copropietario', sa.String(length=255), nullable=True),
-    sa.Column('mail_copropietario', sa.String(length=100), nullable=True),
-    sa.Column('parentesco_copropietario', sa.String(length=100), nullable=True),
+    sa.Column('ocupacion_cliente', sa.String(length=50), nullable=True),
+    sa.Column('phone_cliente', sa.Integer(), nullable=False),
+    sa.Column('direccion_cliente', sa.String(length=100), nullable=False),
+    sa.Column('mail_cliente', sa.String(length=50), nullable=False),
+    sa.Column('nombres_copropietario', sa.String(length=100), nullable=True),
+    sa.Column('apellidos_copropietario', sa.String(length=100), nullable=True),
+    sa.Column('dni_copropietario', sa.Integer(), nullable=True),
+    sa.Column('ruc_copropietario', sa.Integer(), nullable=True),
+    sa.Column('f_nacimiento_copropietario', sa.DateTime(), nullable=True),
+    sa.Column('ocupacion_copropietario', sa.String(length=50), nullable=True),
+    sa.Column('phone_copropietario', sa.Integer(), nullable=True),
+    sa.Column('direccion_copropietario', sa.String(length=100), nullable=True),
+    sa.Column('mail_copropietario', sa.String(length=50), nullable=True),
+    sa.Column('parentesco_copropietario', sa.String(length=50), nullable=True),
     sa.Column('nombres_conyuge', sa.String(length=100), nullable=False),
-    sa.Column('dni_conyuge', sa.String(length=20), nullable=False),
+    sa.Column('dni_conyuge', sa.Integer(), nullable=False),
     sa.Column('metodo_separacion', sa.Enum('efectivo', 'deposito', 'banco', name='metodoseparacionenum'), nullable=False),
     sa.Column('moneda', sa.Enum('PEN', 'USD', name='monedaenum'), nullable=False),
     sa.Column('numero_operacion', sa.String(length=50), nullable=True),
-    sa.Column('fecha_plazo', sa.String(length=50), nullable=False),
+    sa.Column('fecha_plazo', sa.DateTime(), nullable=True),
     sa.Column('fecha_registro', sa.DateTime(), nullable=True),
     sa.Column('monto_arras', sa.DECIMAL(precision=10, scale=2), nullable=False),
     sa.Column('categoria_id', sa.Integer(), nullable=False),
@@ -109,12 +109,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['local_id'], ['locales.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['metraje_id'], ['metrajes.id'], ),
     sa.ForeignKeyConstraint(['zona_id'], ['zonas.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('dni_cliente'),
-    sa.UniqueConstraint('dni_conyuge'),
-    sa.UniqueConstraint('dni_copropietario'),
-    sa.UniqueConstraint('ruc_cliente'),
-    sa.UniqueConstraint('ruc_copropietario')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_clientes_id'), 'clientes', ['id'], unique=False)
     # ### end Alembic commands ###

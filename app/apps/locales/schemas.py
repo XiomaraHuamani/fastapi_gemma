@@ -1,7 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+# from app.apps.locales.enums import (
+#     MetodoSeparacionEnum, MonedaEnum, 
+#     EstadoLocalEnum, TipoLocalEnum, LineaBaseEnum
+# )
 
 # ---------------- ENUMS ----------------
 class LineaBaseEnum(str, Enum):
@@ -50,6 +54,8 @@ class ZonaBase(BaseModel):
     codigo: str
 
 class LocalBase(BaseModel):
+    
+    
     estado: str
 
 class MetrajeBase(BaseModel):

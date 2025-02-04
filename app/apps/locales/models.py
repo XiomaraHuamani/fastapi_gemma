@@ -66,9 +66,6 @@ class Zona(Base):
     locales = relationship("Local", back_populates="zona")
     clientes = relationship("Cliente", back_populates="zona")  
 
-
-
-
 class Metraje(Base):
     __tablename__ = "metrajes"
 
@@ -80,52 +77,51 @@ class Metraje(Base):
     locales = relationship("Local", back_populates="metraje")
     clientes = relationship("Cliente", back_populates="metraje") 
 
+
 class Cliente(Base):
     __tablename__ = "clientes"
 
     id = Column(Integer, primary_key=True, index=True)
     nombres_cliente = Column(String(100), nullable=False)
     apellidos_cliente = Column(String(100), nullable=False)
-    dni_cliente = Column(String(20), unique=True, nullable=False)
-    ruc_cliente = Column(String(20), unique=True, nullable=True)
+    dni_cliente = Column(Integer,  nullable=False)  # ✅ Corrección
+    ruc_cliente = Column(Integer,  nullable=True)  # ✅ Corrección
     f_nacimiento_cliente = Column(DateTime, nullable=False, default=datetime.utcnow)
-    ocupacion_cliente = Column(String(100), nullable=True)
-    phone_cliente = Column(String(20), nullable=False)
-    direccion_cliente = Column(String(255), nullable=False)
-    mail_cliente = Column(String(100), nullable=False)
+    ocupacion_cliente = Column(String(50), nullable=True)
+    phone_cliente = Column(Integer, nullable=False)  # ✅ Corrección
+    direccion_cliente = Column(String(100), nullable=False)
+    mail_cliente = Column(String(50), nullable=False)
 
-    nombres_copropietario = Column(String(100), nullable=False)
-    apellidos_copropietario = Column(String(100), nullable=False)
-    dni_copropietario = Column(String(20), unique=True, nullable=True)
-    ruc_copropietario = Column(String(20), unique=True, nullable=True)
-    f_nacimiento_copropietario = Column(DateTime, nullable=False, default=datetime.utcnow)
-    ocupacion_copropietario = Column(String(100), nullable=True)
-    phone_copropietario = Column(String(20), nullable=True)
-    direccion_copropietario = Column(String(255), nullable=True)
-    mail_copropietario = Column(String(100), nullable=True)
-    parentesco_copropietario = Column(String(100), nullable=True)
+    nombres_copropietario = Column(String(100), nullable=True)
+    apellidos_copropietario = Column(String(100), nullable=True)
+    dni_copropietario = Column(Integer,  nullable=True)  # ✅ Corrección
+    ruc_copropietario = Column(Integer,  nullable=True)  # ✅ Corrección
+    f_nacimiento_copropietario = Column(DateTime, nullable=True)
+    ocupacion_copropietario = Column(String(50), nullable=True)
+    phone_copropietario = Column(Integer, nullable=True)  # ✅ Corrección
+    direccion_copropietario = Column(String(100), nullable=True)
+    mail_copropietario = Column(String(50), nullable=True)
+    parentesco_copropietario = Column(String(50), nullable=True)
 
     nombres_conyuge = Column(String(100), nullable=False)
-    dni_conyuge = Column(String(20), unique=True, nullable=False)
+    dni_conyuge = Column(Integer,  nullable=False)  # ✅ Corrección
 
     metodo_separacion = Column(Enum(MetodoSeparacionEnum), nullable=False)
     moneda = Column(Enum(MonedaEnum), nullable=False)
     numero_operacion = Column(String(50), nullable=True)
-    fecha_plazo = Column(String(50), nullable=False)
+    fecha_plazo = Column(DateTime, nullable=True)
     fecha_registro = Column(DateTime, default=func.now())
     monto_arras = Column(DECIMAL(10, 2), nullable=False)
 
     categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
     metraje_id = Column(Integer, ForeignKey("metrajes.id"), nullable=False)
     zona_id = Column(Integer, ForeignKey("zonas.id"), nullable=False)
-    local_id = Column(Integer, ForeignKey("locales.id", ondelete="SET NULL"), nullable=True)  # ✅ Clave foránea opcional
+    local_id = Column(Integer, ForeignKey("locales.id", ondelete="SET NULL"), nullable=True)
 
     categoria = relationship("Categoria", back_populates="clientes")
     metraje = relationship("Metraje", back_populates="clientes")
     zona = relationship("Zona", back_populates="clientes")
-    local = relationship("Local", back_populates="clientes")  # ✅ Se mantiene la relación inversa
-
-
+    local = relationship("Local", back_populates="clientes")
 
 
 class Local(Base):
