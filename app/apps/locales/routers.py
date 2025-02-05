@@ -118,14 +118,14 @@ def eliminar_metraje(metraje_id: int, db: Session = Depends(get_db)):
     return {"message": "Metraje eliminado"}
 
 # ---------------------- CLIENTE ----------------------
-@router.get("/clientes/", response_model=List[dict])
-def get_clientes(db: Session = Depends(get_db)):
+# ✅ 📌 GET - Listar todos los clientes
+@router.get("/clientes/", response_model=list)
+def listar_clientes(db: Session = Depends(get_db)):
     clientes = db.query(Cliente).all()
-    
-    # ✅ Formateamos cada cliente exactamente como en el POST
+
     response_data = []
     for cliente in clientes:
-        response_data.append({
+        cliente_data = {
             "id": cliente.id,
             "nombres_cliente": cliente.nombres_cliente,
             "apellidos_cliente": cliente.apellidos_cliente,
@@ -142,35 +142,44 @@ def get_clientes(db: Session = Depends(get_db)):
             "numero_operacion": cliente.numero_operacion,
             "fecha_plazo": cliente.fecha_plazo,
             "monto_arras": cliente.monto_arras,
-            "fecha_registro": cliente.fecha_registro.isoformat(),
-            "local": {
-                "zona_codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
-                "estado": cliente.local.estado.value if cliente.local else None,
-                "precio_base": str(cliente.local.precio_base) if cliente.local else None,
-                "tipo": cliente.local.tipo.value if cliente.local else None,
-                "subnivel_de": {
-                    "categoria_id": cliente.local.zona.categoria_id if cliente.local and cliente.local.zona else None,
-                    "codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
-                    "linea_base": cliente.local.zona.linea_base.value if cliente.local and cliente.local.zona else None
-                } if cliente.local and cliente.local.zona else None,
+            "fecha_registro": cliente.fecha_registro,
+        }
+
+        # ✅ Solo agregamos "local" si existe
+        if cliente.local:
+            cliente_data["local"] = {
+                "zona_codigo": cliente.local.zona.codigo if cliente.local.zona else None,
+                "estado": cliente.local.estado.value,
+                "precio_base": cliente.local.precio_base,
+                "tipo": cliente.local.tipo.value,
                 "metraje": {
-                    "area": cliente.local.metraje.area if cliente.local and cliente.local.metraje else None,
-                    "perimetro": cliente.local.metraje.perimetro if cliente.local and cliente.local.metraje else None,
-                    "image": cliente.local.metraje.image if cliente.local and cliente.local.metraje else None
-                } if cliente.local and cliente.local.metraje else None
-            } if cliente.local else None
-        })
+                    "area": cliente.local.metraje.area if cliente.local.metraje else None,
+                    "perimetro": cliente.local.metraje.perimetro if cliente.local.metraje else None,
+                    "image": cliente.local.metraje.image if cliente.local.metraje else None
+                } if cliente.local.metraje else None
+            }
+
+            # ✅ Solo agregamos "subnivel_de" si tiene datos
+            if cliente.local.subnivel_de:
+                cliente_data["local"]["subnivel_de"] = {
+                    "categoria_id": cliente.local.zona.categoria_id if cliente.local.zona else None,
+                    "codigo": cliente.local.zona.codigo if cliente.local.zona else None,
+                    "linea_base": cliente.local.zona.linea_base.value if cliente.local.zona else None
+                }
+
+        response_data.append(cliente_data)
 
     return response_data
 
+
+# ✅ 📌 GET - Obtener un cliente por ID
 @router.get("/clientes/{cliente_id}", response_model=dict)
-def get_cliente(cliente_id: int, db: Session = Depends(get_db)):
+def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    
-    # ✅ Formateamos la respuesta para que coincida con el JSON esperado
-    return {
+
+    cliente_data = {
         "id": cliente.id,
         "nombres_cliente": cliente.nombres_cliente,
         "apellidos_cliente": cliente.apellidos_cliente,
@@ -187,250 +196,134 @@ def get_cliente(cliente_id: int, db: Session = Depends(get_db)):
         "numero_operacion": cliente.numero_operacion,
         "fecha_plazo": cliente.fecha_plazo,
         "monto_arras": cliente.monto_arras,
-        "fecha_registro": cliente.fecha_registro.isoformat(),
-        "local": {
-            "zona_codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
-            "estado": cliente.local.estado.value if cliente.local else None,
-            "precio_base": str(cliente.local.precio_base) if cliente.local else None,
-            "tipo": cliente.local.tipo.value if cliente.local else None,
-            "subnivel_de": {
-                "categoria_id": cliente.local.zona.categoria_id if cliente.local and cliente.local.zona else None,
-                "codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
-                "linea_base": cliente.local.zona.linea_base.value if cliente.local and cliente.local.zona else None
-            } if cliente.local and cliente.local.zona else None,
-            "metraje": {
-                "area": cliente.local.metraje.area if cliente.local and cliente.local.metraje else None,
-                "perimetro": cliente.local.metraje.perimetro if cliente.local and cliente.local.metraje else None,
-                "image": cliente.local.metraje.image if cliente.local and cliente.local.metraje else None
-            } if cliente.local and cliente.local.metraje else None
-        } if cliente.local else None
+        "fecha_registro": cliente.fecha_registro,
     }
 
+    # ✅ Solo agregamos "local" si existe
+    if cliente.local:
+        cliente_data["local"] = {
+            "zona_codigo": cliente.local.zona.codigo if cliente.local.zona else None,
+            "estado": cliente.local.estado.value,
+            "precio_base": cliente.local.precio_base,
+            "tipo": cliente.local.tipo.value,
+            "metraje": {
+                "area": cliente.local.metraje.area if cliente.local.metraje else None,
+                "perimetro": cliente.local.metraje.perimetro if cliente.local.metraje else None,
+                "image": cliente.local.metraje.image if cliente.local.metraje else None
+            } if cliente.local.metraje else None
+        }
+
+        # ✅ Solo agregamos "subnivel_de" si tiene datos
+        if cliente.local.subnivel_de:
+            cliente_data["local"]["subnivel_de"] = {
+                "categoria_id": cliente.local.zona.categoria_id if cliente.local.zona else None,
+                "codigo": cliente.local.zona.codigo if cliente.local.zona else None,
+                "linea_base": cliente.local.zona.linea_base.value if cliente.local.zona else None
+            }
+
+    return cliente_data
+
+
+# ✅ 📌 POST - Crear un cliente
 @router.post("/clientes/", response_model=dict)
-def create_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
-    # Verificar si la categoría existe
-    categoria = db.query(Categoria).filter(Categoria.id == cliente.categoria_id).first()
-    if not categoria:
-        raise HTTPException(status_code=404, detail="Categoría no encontrada")
-
-    # Verificar si la zona existe
-    zona = db.query(Zona).filter(Zona.id == cliente.zona_id).first()
-    if not zona:
-        raise HTTPException(status_code=404, detail="Zona no encontrada")
-
-    # Verificar si el metraje existe
-    metraje = db.query(Metraje).filter(Metraje.id == cliente.metraje_id).first()
-    if not metraje:
-        raise HTTPException(status_code=404, detail="Metraje no encontrado")
-
-    # Verificar si el local existe
-    local = db.query(Local).filter(Local.id == cliente.local_id).first()
+def crear_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db)):
+    local = db.query(Local).filter(Local.id == cliente_data.local_id).first()
     if not local:
         raise HTTPException(status_code=404, detail="Local no encontrado")
 
-    # Crear el objeto Cliente con fecha_registro incluida
-    new_cliente = Cliente(
-        **cliente.dict(),
-        fecha_registro=datetime.utcnow()  # ✅ Ahora sí funciona correctamente
+    nuevo_cliente = Cliente(
+        **cliente_data.dict(exclude={"local_id"}),
+        categoria_id=local.zona.categoria_id if local.zona else None,
+        metraje_id=local.metraje_id,
+        zona_id=local.zona_id,
+        local_id=cliente_data.local_id,
+        fecha_registro=datetime.utcnow()
     )
 
-    db.add(new_cliente)
+    db.add(nuevo_cliente)
     db.commit()
-    db.refresh(new_cliente)
+    db.refresh(nuevo_cliente)
 
-    # ✅ Retornar la respuesta en el formato correcto
-    return {
-        "id": new_cliente.id,
-        "nombres_cliente": new_cliente.nombres_cliente,
-        "apellidos_cliente": new_cliente.apellidos_cliente,
-        "dni_cliente": new_cliente.dni_cliente,
-        "ruc_cliente": new_cliente.ruc_cliente,
-        "ocupacion_cliente": new_cliente.ocupacion_cliente,
-        "phone_cliente": new_cliente.phone_cliente,
-        "direccion_cliente": new_cliente.direccion_cliente,
-        "mail_cliente": new_cliente.mail_cliente,
-        "nombres_conyuge": new_cliente.nombres_conyuge,
-        "dni_conyuge": new_cliente.dni_conyuge,
-        "metodo_separacion": new_cliente.metodo_separacion.value,
-        "moneda": new_cliente.moneda.value,
-        "numero_operacion": new_cliente.numero_operacion,
-        "fecha_plazo": new_cliente.fecha_plazo,
-        "monto_arras": new_cliente.monto_arras,
-        "fecha_registro": new_cliente.fecha_registro.isoformat(),
-        "local": {
-            "zona_codigo": local.zona.codigo if local.zona else None,
-            "estado": local.estado.value,
-            "precio_base": str(local.precio_base),
-            "tipo": local.tipo.value,
-            "subnivel_de": {
-                "categoria_id": local.zona.categoria_id if local.zona else None,
-                "codigo": local.zona.codigo if local.zona else None,
-                "linea_base": local.zona.linea_base.value if local.zona else None
-            } if local.zona else None,
-            "metraje": {
-                "area": local.metraje.area if local.metraje else None,
-                "perimetro": local.metraje.perimetro if local.metraje else None,
-                "image": local.metraje.image if local.metraje else None
-            } if local.metraje else None
-        }
-    }
+    return obtener_cliente(nuevo_cliente.id, db)
 
 
+# ✅ 📌 PUT - Actualizar un cliente
 @router.put("/clientes/{cliente_id}", response_model=dict)
-def update_cliente(cliente_id: int, cliente_update: ClienteUpdate, db: Session = Depends(get_db)):
-    # Buscar el cliente en la base de datos
+def actualizar_cliente(cliente_id: int, cliente_data: ClienteUpdate, db: Session = Depends(get_db)):
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-    # Verificar si la zona, metraje o local han cambiado y existen
-    if cliente_update.zona_id:
-        zona = db.query(Zona).filter(Zona.id == cliente_update.zona_id).first()
-        if not zona:
-            raise HTTPException(status_code=404, detail="Zona no encontrada")
-
-    if cliente_update.metraje_id:
-        metraje = db.query(Metraje).filter(Metraje.id == cliente_update.metraje_id).first()
-        if not metraje:
-            raise HTTPException(status_code=404, detail="Metraje no encontrado")
-
-    if cliente_update.local_id:
-        local = db.query(Local).filter(Local.id == cliente_update.local_id).first()
-        if not local:
-            raise HTTPException(status_code=404, detail="Local no encontrado")
-
-    # Actualizar solo los campos enviados
-    for key, value in cliente_update.dict(exclude_unset=True).items():
+    update_data = cliente_data.dict(exclude_unset=True)
+    for key, value in update_data.items():
         setattr(cliente, key, value)
 
     db.commit()
     db.refresh(cliente)
 
-    # ✅ Retornar el formato corregido
-    return {
-        "id": cliente.id,
-        "nombres_cliente": cliente.nombres_cliente,
-        "apellidos_cliente": cliente.apellidos_cliente,
-        "dni_cliente": cliente.dni_cliente,
-        "ruc_cliente": cliente.ruc_cliente,
-        "ocupacion_cliente": cliente.ocupacion_cliente,
-        "phone_cliente": cliente.phone_cliente,
-        "direccion_cliente": cliente.direccion_cliente,
-        "mail_cliente": cliente.mail_cliente,
-        "nombres_conyuge": cliente.nombres_conyuge,
-        "dni_conyuge": cliente.dni_conyuge,
-        "metodo_separacion": cliente.metodo_separacion.value,
-        "moneda": cliente.moneda.value,
-        "numero_operacion": cliente.numero_operacion,
-        "fecha_plazo": cliente.fecha_plazo,
-        "monto_arras": cliente.monto_arras,
-        "fecha_registro": cliente.fecha_registro.isoformat(),
-        "local": {
-            "zona_codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
-            "estado": cliente.local.estado.value if cliente.local else None,
-            "precio_base": str(cliente.local.precio_base) if cliente.local else None,
-            "tipo": cliente.local.tipo.value if cliente.local else None,
-            "subnivel_de": {
-                "categoria_id": cliente.local.zona.categoria_id if cliente.local and cliente.local.zona else None,
-                "codigo": cliente.local.zona.codigo if cliente.local and cliente.local.zona else None,
-                "linea_base": cliente.local.zona.linea_base.value if cliente.local and cliente.local.zona else None
-            } if cliente.local and cliente.local.zona else None,
-            "metraje": {
-                "area": cliente.local.metraje.area if cliente.local and cliente.local.metraje else None,
-                "perimetro": cliente.local.metraje.perimetro if cliente.local and cliente.local.metraje else None,
-                "image": cliente.local.metraje.image if cliente.local and cliente.local.metraje else None
-            } if cliente.local and cliente.local.metraje else None
-        } if cliente.local else None
-    }
+    return obtener_cliente(cliente.id, db)
 
 
-
+# ✅ 📌 DELETE - Eliminar un cliente
 @router.delete("/clientes/{cliente_id}", response_model=dict)
-def delete_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    # Buscar el cliente en la base de datos
+def eliminar_cliente(cliente_id: int, db: Session = Depends(get_db)):
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     db.delete(cliente)
     db.commit()
-    
-    return {"message": "Cliente eliminado exitosamente"}
+
+    return {"message": "Cliente eliminado correctamente"}
 
 
 
 # ---------------------- LOCAL ----------------------
-# @router.get("/locales", response_model=List[LocalResponse])
-# def listar_locales(db: Session = Depends(get_db)):
-#     locales = (
-#         db.query(Local, Metraje.area, Metraje.perimetro, Metraje.image, Zona.codigo)
-#         .join(Metraje, Local.metraje_id == Metraje.id, isouter=True)
-#         .join(Zona, Local.zona_id == Zona.id, isouter=True)
-#         .all()
-#     )
 
-#     return [
-#         {
-#             "zona_codigo": local.codigo if local.codigo else "N/A",
-#             "estado": local.Local.estado.value,
-#             "precio_base": float(local.Local.precio_base),
-#             "tipo": local.Local.tipo.value,
-#             "area": local.area if local.area else "N/A",
-#             # "categoria": {"nombre": zona.categoria.nombre}, 
-#             #"subnivel_de": local.Local.subnivel_de,
-#             "subnivel_de": {"codigo":local.zona.codigo},
-#             "perimetro": local.perimetro if local.perimetro else "N/A",
-#             "image": local.image if local.image else "https://via.placeholder.com/150",
-#         }
-#         for local in locales
-#     ]
-
-@router.get("/locales/", response_model=List[dict])
+# ✅ 📌 GET - Listar locales
+@router.get("/locales/", response_model=list)
 def get_locales(db: Session = Depends(get_db)):
     locales = db.query(Local).all()
-    
-    # ✅ Formateamos cada local exactamente como en el POST
+
     response_data = []
     for local in locales:
-        response_data.append({
+        local_data = {
             "zona_codigo": local.zona.codigo if local.zona else None,
             "estado": local.estado.value,
             "precio_base": local.precio_base,
             "tipo": local.tipo.value,
-            "subnivel_de": {
-                "categoria_id": local.zona.categoria_id if local.zona else None,
-                "codigo": local.zona.codigo if local.zona else None,
-                "linea_base": local.zona.linea_base.value if local.zona else None
-            } if local.zona else None,
             "metraje": {
                 "area": local.metraje.area if local.metraje else None,
                 "perimetro": local.metraje.perimetro if local.metraje else None,
                 "image": local.metraje.image if local.metraje else None
             } if local.metraje else None
-        })
+        }
+
+        # ✅ Solo incluir `subnivel_de` si tiene datos
+        if local.subnivel_de:
+            local_data["subnivel_de"] = {
+                "categoria_id": local.zona.categoria_id if local.zona else None,
+                "codigo": local.zona.codigo if local.zona else None,
+                "linea_base": local.zona.linea_base.value if local.zona else None
+            }
+
+        response_data.append(local_data)
 
     return response_data
 
 
-
-
+# ✅ 📌 GET - Obtener un local por ID
 @router.get("/locales/{local_id}", response_model=dict)
 def get_local(local_id: int, db: Session = Depends(get_db)):
     local = db.query(Local).filter(Local.id == local_id).first()
     if not local:
         raise HTTPException(status_code=404, detail="Local no encontrado")
-    
-    # ✅ Formateamos la respuesta para que coincida con el POST
-    return {
+
+    local_data = {
         "zona_codigo": local.zona.codigo if local.zona else None,
         "estado": local.estado.value,
         "precio_base": local.precio_base,
         "tipo": local.tipo.value,
-        "subnivel_de": {
-            "categoria_id": local.zona.categoria_id if local.zona else None,
-            "codigo": local.zona.codigo if local.zona else None,
-            "linea_base": local.zona.linea_base.value if local.zona else None
-        } if local.zona else None,
         "metraje": {
             "area": local.metraje.area if local.metraje else None,
             "perimetro": local.metraje.perimetro if local.metraje else None,
@@ -438,26 +331,33 @@ def get_local(local_id: int, db: Session = Depends(get_db)):
         } if local.metraje else None
     }
 
+    # ✅ Solo incluir `subnivel_de` si tiene datos
+    if local.subnivel_de:
+        local_data["subnivel_de"] = {
+            "categoria_id": local.zona.categoria_id if local.zona else None,
+            "codigo": local.zona.codigo if local.zona else None,
+            "linea_base": local.zona.linea_base.value if local.zona else None
+        }
+
+    return local_data
 
 
+# ✅ 📌 POST - Crear un local
 @router.post("/locales/", response_model=dict)
 def create_local(local: LocalCreate, db: Session = Depends(get_db)):
-    # Verificar si la zona existe
     zona = db.query(Zona).filter(Zona.id == local.zona_id).first() if local.zona_id else None
     if local.zona_id and not zona:
         raise HTTPException(status_code=404, detail="Zona no encontrada")
 
-    # Verificar si el metraje existe
     metraje = db.query(Metraje).filter(Metraje.id == local.metraje_id).first() if local.metraje_id else None
     if local.metraje_id and not metraje:
         raise HTTPException(status_code=404, detail="Metraje no encontrado")
 
-    # Crear el objeto Local
     new_local = Local(
         estado=local.estado,
         precio_base=local.precio_base,
         tipo=local.tipo,
-        subnivel_de=local.subnivel_de,
+        subnivel_de=local.subnivel_de if local.subnivel_de else None,
         zona_id=local.zona_id,
         metraje_id=local.metraje_id
     )
@@ -466,17 +366,11 @@ def create_local(local: LocalCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_local)
 
-    # ✅ Formateamos la respuesta exactamente como la necesitas
     response_data = {
         "zona_codigo": new_local.zona.codigo if new_local.zona else None,
         "estado": new_local.estado.value,
         "precio_base": new_local.precio_base,
         "tipo": new_local.tipo.value,
-        "subnivel_de": {
-            "categoria_id": new_local.zona.categoria_id if new_local.zona else None,
-            "codigo": new_local.zona.codigo if new_local.zona else None,
-            "linea_base": new_local.zona.linea_base.value if new_local.zona else None
-        } if new_local.zona else None,
         "metraje": {
             "area": new_local.metraje.area if new_local.metraje else None,
             "perimetro": new_local.metraje.perimetro if new_local.metraje else None,
@@ -484,12 +378,19 @@ def create_local(local: LocalCreate, db: Session = Depends(get_db)):
         } if new_local.metraje else None
     }
 
+    # ✅ Solo incluir `subnivel_de` si tiene datos
+    if new_local.subnivel_de:
+        response_data["subnivel_de"] = {
+            "categoria_id": new_local.zona.categoria_id if new_local.zona else None,
+            "codigo": new_local.zona.codigo if new_local.zona else None,
+            "linea_base": new_local.zona.linea_base.value if new_local.zona else None
+        }
+
     return response_data
 
 
-
 # ✅ 📌 PUT - Actualizar un local
-@router.put("/locales/{local_id}", response_model=LocalResponse)
+@router.put("/locales/{local_id}", response_model=dict)
 def actualizar_local(local_id: int, local_data: LocalCreate, db: Session = Depends(get_db)):
     local = db.query(Local).filter(Local.id == local_id).first()
     if not local:
@@ -502,7 +403,27 @@ def actualizar_local(local_id: int, local_data: LocalCreate, db: Session = Depen
     db.commit()
     db.refresh(local)
 
-    return obtener_local(local.id, db)
+    response_data = {
+        "zona_codigo": local.zona.codigo if local.zona else None,
+        "estado": local.estado.value,
+        "precio_base": local.precio_base,
+        "tipo": local.tipo.value,
+        "metraje": {
+            "area": local.metraje.area if local.metraje else None,
+            "perimetro": local.metraje.perimetro if local.metraje else None,
+            "image": local.metraje.image if local.metraje else None
+        } if local.metraje else None
+    }
+
+    # ✅ Solo incluir `subnivel_de` si tiene datos
+    if local.subnivel_de:
+        response_data["subnivel_de"] = {
+            "categoria_id": local.zona.categoria_id if local.zona else None,
+            "codigo": local.zona.codigo if local.zona else None,
+            "linea_base": local.zona.linea_base.value if local.zona else None
+        }
+
+    return response_data
 
 
 # ✅ 📌 DELETE - Eliminar un local

@@ -2,10 +2,9 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
-# from app.apps.locales.enums import (
-#     MetodoSeparacionEnum, MonedaEnum, 
-#     EstadoLocalEnum, TipoLocalEnum, LineaBaseEnum
-# )
+from app.apps.locales.models import (
+    MetodoSeparacionEnum, MonedaEnum, EstadoLocalEnum, TipoLocalEnum, LineaBaseEnum
+)
 
 # ---------------- ENUMS ----------------
 class LineaBaseEnum(str, Enum):
@@ -115,54 +114,54 @@ class MetrajeResponse(MetrajeBase):
 
 # ---------------------- CLIENTE ----------------------
 
+# 📌 Subnivel del local
+class SubnivelSchema(BaseModel):
+    categoria_id: int
+    codigo: str
+    linea_base: LineaBaseEnum
+
+# 📌 Metraje del local
+class MetrajeSchema(BaseModel):
+    area: str
+    perimetro: str
+    image: Optional[str]
+
+# 📌 Información del Local
+class LocalSchema(BaseModel):
+    zona_codigo: str
+    estado: EstadoLocalEnum
+    precio_base: float
+    tipo: TipoLocalEnum
+    subnivel_de: SubnivelSchema
+    metraje: MetrajeSchema
+
+# 📌 Esquema para Crear Cliente (POST)
 class ClienteCreate(BaseModel):
     nombres_cliente: str
     apellidos_cliente: str
-    dni_cliente: str
-    ruc_cliente: Optional[str] = None
+    dni_cliente: int
+    ruc_cliente: Optional[int] = None
     ocupacion_cliente: Optional[str] = None
-    phone_cliente: str
+    phone_cliente: int
     direccion_cliente: str
-    mail_cliente: str
+    mail_cliente: EmailStr
     nombres_conyuge: str
-    dni_conyuge: str
+    dni_conyuge: int
     metodo_separacion: MetodoSeparacionEnum
     moneda: MonedaEnum
     numero_operacion: Optional[str] = None
-    fecha_plazo: str
+    fecha_plazo: Optional[datetime] = None
     monto_arras: float
-    categoria_id: int
-    metraje_id: int
-    zona_id: int
-    local_id: int
+    local_id: Optional[int] = None
 
-
-class ClienteResponse(BaseModel):
+# 📌 Esquema para Respuesta de Cliente (GET)
+class ClienteResponse(ClienteCreate):
     id: int
-    nombres_cliente: str
-    apellidos_cliente: str
-    dni_cliente: str
-    ruc_cliente: Optional[str] = None
-    ocupacion_cliente: Optional[str] = None
-    phone_cliente: str
-    direccion_cliente: str
-    mail_cliente: str
-    nombres_conyuge: str
-    dni_conyuge: str
-    metodo_separacion: MetodoSeparacionEnum
-    moneda: MonedaEnum
-    numero_operacion: Optional[str] = None
-    fecha_plazo: str
-    monto_arras: float
     fecha_registro: datetime
-
-    categoria: CategoriaBase
-    metraje: MetrajeBase
-    zona: ZonaBase
-    local: LocalBase
+    local: Optional[LocalSchema]
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # ✅ Convierte SQLAlchemy a Pydantic
 
 # 🔥 SCHEMA para ACTUALIZAR Cliente (PUT)
 class ClienteUpdate(BaseModel):

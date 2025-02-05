@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DECIMAL, Enum, DateTime, func
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DECIMAL, Enum, DateTime, func, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from sqlalchemy.orm import relationship
@@ -84,27 +84,27 @@ class Cliente(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombres_cliente = Column(String(100), nullable=False)
     apellidos_cliente = Column(String(100), nullable=False)
-    dni_cliente = Column(Integer,  nullable=False)  # ✅ Corrección
-    ruc_cliente = Column(Integer,  nullable=True)  # ✅ Corrección
+    dni_cliente = Column(BigInteger,  nullable=False)  # ✅ Corrección
+    ruc_cliente = Column(BigInteger,  nullable=True)  # ✅ Corrección
     f_nacimiento_cliente = Column(DateTime, nullable=False, default=datetime.utcnow)
     ocupacion_cliente = Column(String(50), nullable=True)
-    phone_cliente = Column(Integer, nullable=False)  # ✅ Corrección
+    phone_cliente = Column(BigInteger, nullable=False)  # ✅ Corrección
     direccion_cliente = Column(String(100), nullable=False)
     mail_cliente = Column(String(50), nullable=False)
 
     nombres_copropietario = Column(String(100), nullable=True)
     apellidos_copropietario = Column(String(100), nullable=True)
-    dni_copropietario = Column(Integer,  nullable=True)  # ✅ Corrección
-    ruc_copropietario = Column(Integer,  nullable=True)  # ✅ Corrección
+    dni_copropietario = Column(BigInteger,  nullable=True)  # ✅ Corrección
+    ruc_copropietario = Column(BigInteger,  nullable=True)  # ✅ Corrección
     f_nacimiento_copropietario = Column(DateTime, nullable=True)
     ocupacion_copropietario = Column(String(50), nullable=True)
-    phone_copropietario = Column(Integer, nullable=True)  # ✅ Corrección
+    phone_copropietario = Column(BigInteger, nullable=True)  # ✅ Corrección
     direccion_copropietario = Column(String(100), nullable=True)
     mail_copropietario = Column(String(50), nullable=True)
     parentesco_copropietario = Column(String(50), nullable=True)
 
     nombres_conyuge = Column(String(100), nullable=False)
-    dni_conyuge = Column(Integer,  nullable=False)  # ✅ Corrección
+    dni_conyuge = Column(BigInteger,  nullable=False)  # ✅ Corrección
 
     metodo_separacion = Column(Enum(MetodoSeparacionEnum), nullable=False)
     moneda = Column(Enum(MonedaEnum), nullable=False)
