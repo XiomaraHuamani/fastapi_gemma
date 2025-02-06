@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DECIMAL, Enum, DateTime, func, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.db.connection import Base
 import enum
 
@@ -133,6 +133,15 @@ class Local(Base):
     tipo = Column(Enum(TipoLocalEnum), nullable=False)
 
     subnivel_de = Column(String(20), unique=True, nullable=True)
+    # Esta columna indicará si es un subnivel (si tiene padre)
+    subnivel_de_id = Column(Integer, ForeignKey("locales.id"), nullable=True, unique=False)
+    
+    # Relación para el padre; el backref "subniveles" crea automáticamente la propiedad en el padre
+    padre = relationship(
+        "Local",
+        remote_side=[id],
+        backref=backref("subniveles", cascade="all, delete-orphan")
+    )
 
     zona_id = Column(Integer, ForeignKey("zonas.id", ondelete="SET NULL"), nullable=True)
     metraje_id = Column(Integer, ForeignKey("metrajes.id", ondelete="SET NULL"), nullable=True)

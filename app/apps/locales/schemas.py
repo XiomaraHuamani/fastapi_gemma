@@ -2,8 +2,9 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+from decimal import Decimal
 from app.apps.locales.models import (
-    MetodoSeparacionEnum, MonedaEnum, EstadoLocalEnum, TipoLocalEnum, LineaBaseEnum
+    MetodoSeparacionEnum, MonedaEnum, EstadoLocalEnum, TipoLocalEnum, LineaBaseEnum, EstadoLocalEnum, TipoLocalEnum
 )
 
 # ---------------- ENUMS ----------------
@@ -188,34 +189,43 @@ class ClienteUpdate(BaseModel):
 
 # ---------------------- LOCAL ----------------------
 class LocalResponse(BaseModel):
-    estado: str
-    precio_base: float
-    tipo: str
-    area: str
-    zona: ZonaBase
-    subnivel_de: Optional[str]
-    perimetro: str
-    image: Optional[str]
-    zona_codigo: str
+    id: int
+    estado: EstadoLocalEnum
+    precio_base: Decimal
+    tipo: TipoLocalEnum
+    subnivel_de: Optional[str] = None
+    subnivel_de_id: Optional[int] = None
+
+    # Si quieres mostrar el código de la Zona
+    zona_codigo: Optional[str] = None
+
+    # Campos de metraje
+    area: Optional[str] = None
+    perimetro: Optional[str] = None
+    image: Optional[str] = None
 
     class Config:
-        from_attributes = True  # ✅ Permite convertir SQLAlchemy a Pydantic
+        orm_mode = True
 
 # 📌 Esquema para creación (POST)
 class LocalCreate(BaseModel):
-    estado: str
-    precio_base: float
-    tipo: str
-    subnivel_de: Optional[str]
-    zona_id: Optional[int]
-    metraje_id: Optional[int]
+    estado: EstadoLocalEnum
+    precio_base: Decimal
+    tipo: TipoLocalEnum
+    subnivel_de: Optional[str] = None         # código
+    subnivel_de_id: Optional[int] = None      # referencia al padre
+
+    zona_id: Optional[int] = None
+    metraje_id: Optional[int] = None
 
 # 📌 Esquema para actualización (PUT)
 class LocalUpdate(BaseModel):
     estado: Optional[EstadoLocalEnum] = None
-    precio_base: Optional[float] = None
+    precio_base: Optional[Decimal] = None
     tipo: Optional[TipoLocalEnum] = None
     subnivel_de: Optional[str] = None
+    subnivel_de_id: Optional[int] = None
+
     zona_id: Optional[int] = None
     metraje_id: Optional[int] = None
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, subqueryload
 from fastapi.encoders import jsonable_encoder
 from typing import List
 from app.db.connection import get_db
@@ -13,6 +13,7 @@ from app.apps.locales.schemas import (
     ResponseGrupoLocales, GrupoLocalesSchema, LocalSchema
 )
 from app.apps.locales.models import Categoria, Zona, Metraje, Cliente, Local
+from app.apps.locales.utils import serialize_local, serialize_local_with_subniveles
 
 router = APIRouter()
 
@@ -118,7 +119,7 @@ def eliminar_metraje(metraje_id: int, db: Session = Depends(get_db)):
     return {"message": "Metraje eliminado"}
 
 # ---------------------- CLIENTE ----------------------
-# ✅ 📌 GET - Listar todos los clientes
+
 @router.get("/clientes/", response_model=list)
 def listar_clientes(db: Session = Depends(get_db)):
     clientes = db.query(Cliente).all()
@@ -145,7 +146,6 @@ def listar_clientes(db: Session = Depends(get_db)):
             "fecha_registro": cliente.fecha_registro,
         }
 
-        # ✅ Solo agregamos "local" si existe
         if cliente.local:
             cliente_data["local"] = {
                 "zona_codigo": cliente.local.zona.codigo if cliente.local.zona else None,
@@ -159,7 +159,6 @@ def listar_clientes(db: Session = Depends(get_db)):
                 } if cliente.local.metraje else None
             }
 
-            # ✅ Solo agregamos "subnivel_de" si tiene datos
             if cliente.local.subnivel_de:
                 cliente_data["local"]["subnivel_de"] = {
                     "categoria_id": cliente.local.zona.categoria_id if cliente.local.zona else None,
@@ -172,7 +171,6 @@ def listar_clientes(db: Session = Depends(get_db)):
     return response_data
 
 
-# ✅ 📌 GET - Obtener un cliente por ID
 @router.get("/clientes/{cliente_id}", response_model=dict)
 def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
@@ -199,7 +197,6 @@ def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
         "fecha_registro": cliente.fecha_registro,
     }
 
-    # ✅ Solo agregamos "local" si existe
     if cliente.local:
         cliente_data["local"] = {
             "zona_codigo": cliente.local.zona.codigo if cliente.local.zona else None,
@@ -213,7 +210,6 @@ def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
             } if cliente.local.metraje else None
         }
 
-        # ✅ Solo agregamos "subnivel_de" si tiene datos
         if cliente.local.subnivel_de:
             cliente_data["local"]["subnivel_de"] = {
                 "categoria_id": cliente.local.zona.categoria_id if cliente.local.zona else None,
@@ -224,7 +220,6 @@ def obtener_cliente(cliente_id: int, db: Session = Depends(get_db)):
     return cliente_data
 
 
-# ✅ 📌 POST - Crear un cliente
 @router.post("/clientes/", response_model=dict)
 def crear_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db)):
     local = db.query(Local).filter(Local.id == cliente_data.local_id).first()
@@ -247,7 +242,6 @@ def crear_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db)):
     return obtener_cliente(nuevo_cliente.id, db)
 
 
-# ✅ 📌 PUT - Actualizar un cliente
 @router.put("/clientes/{cliente_id}", response_model=dict)
 def actualizar_cliente(cliente_id: int, cliente_data: ClienteUpdate, db: Session = Depends(get_db)):
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
@@ -438,44 +432,54 @@ def eliminar_local(local_id: int, db: Session = Depends(get_db)):
 
     return {"message": "Local eliminado correctamente"}
 
+@router.get("/grupos", response_model=ResponseGrupoLocales)
+def get_grupos(db: Session = Depends(get_db)):
+    # Definición de grupos (cada grupo tiene un tipo y la lista de códigos de zona que lo integran)
+    grupos_definidos = [
+        {"tipo": "Entrada segundaria grupo 1 izquierda", "zona_codigos": ["PT 1", "PT 2", "PT 3", "PT 4", "PT 9", "PT 10", "PT 12", "PT 14"]},
+        {"tipo": "Entrada segundaria grupo 1 derecha", "zona_codigos": ["PT 5", "PT 6", "PT 7", "PT 8", "PT 15", "PT 16", "PT 18", "PT 20"]},
+        {"tipo": "Entrada segundaria grupo 2 izquierda", "zona_codigos": ["PT 21", "PT 22", "PT 23", "PT 24", "PT 25", "PT 26", "PT 33", "PT 34"]},
+        {"tipo": "Entrada segundaria grupo 2 derecha", "zona_codigos": ["PT 27", "PT 28", "PT 29", "PT 30", "PT 31", "PT 32", "PT 37", "PT 38", "PT 93", "PT 40"]},
+        {"tipo": "Entrada segundaria grupo 3 izquierda", "zona_codigos": ["PT 41", "PT 42", "PT 43", "PT 44", "PT 49", "PT 50", "PT 51", "PT 52", "PT 53", "PT 54"]},
+        {"tipo": "Entrada segundaria grupo 3 derecha", "zona_codigos": ["PT 45", "PT 46", "PT 47", "PT 48", "PT 55", "PT 56", "PT 47", "PT 58", "PT 59", "PT 60"]},
+        {"tipo": "Entrada segundaria grupo 4 izquierda", "zona_codigos": ["PT 61", "PT 62", "PT 63", "PT 64", "PT 65", "PT 66", "PT 73", "PT 74", "PT 75", "PT 76", "PT 77", "PT 78"]},
+        {"tipo": "Entrada segundaria grupo 4 derecha", "zona_codigos": ["PT 67", "PT 68", "PT 69", "PT 70", "PT 71", "PT 72", "PT 79", "PT 80", "PT 81", "PT 82", "PT 83", "PT 84"]},
+        {"tipo": "Entrada segundaria grupo 5 izquierda", "zona_codigos": ["PT 85", "PT 86", "PT 87", "PT 88", "PT 89", "PT 90", "PT 97", "PT 98", "PT 99", "PT 100"]},
+        {"tipo": "Entrada segundaria grupo 5 derecha", "zona_codigos": ["PT 91", "PT 92", "PT 93", "PT 94", "PT 95", "PT 96", "PT 101", "PT 102", "PT 103", "PT 104"]},
+        {"tipo": "Entrada grupo 1 larga", "zona_codigos": ["PT 105", "PT 106", "PT 107", "PT 108", "PT 109"]},
+        {"tipo": "Entrada grupo 2 larga", "zona_codigos": ["PT 110", "PT 111", "PT 112", "PT 113", "PT 114", "PT 115", "PT 116", "PT 117"]}
+    ]
 
-# ----------------------  ----------------------
+    grupos_response = []
 
-# ✅ 📌 GET - Obtener locales organizados en grupos
-@router.get("/locales/grupos", response_model=ResponseGrupoLocales)
-def obtener_locales_por_grupos(db: Session = Depends(get_db)):
-    # 🔥 Obtener todos los locales con su zona y metraje relacionados
-    locales_db = db.query(Local).join(Zona).join(Metraje).all()
+    # Para cada grupo definido se consulta en la BD:
+    for grupo_def in grupos_definidos:
+        tipo = grupo_def["tipo"]
+        zona_codigos = grupo_def["zona_codigos"]
 
-    # 🔥 Agrupar locales por tipo
-    grupos_dict = {}
-    for local in locales_db:
-        tipo = local.tipo.value  # 🔥 Obtener el tipo de local
-        local_data = {
-            "zona_codigo": local.zona.codigo,
-            "precio": f"${local.precio_base:,.0f}",
-            "estado": local.estado.value,
-            "area": f"{local.metraje.area} m²" if local.metraje else None,
-            "perimetro": local.metraje.perimetro if local.metraje else None,
-            "image": "../assets/tipos_locales/mediano.png",
-            "linea_base": local.zona.linea_base.value,
-            "subniveles": []  # 🔥 Inicializar la lista de subniveles
-        }
+        # Se filtran solo los locales principales (donde subnivel_de_id es None)
+        # cuya zona tenga un código en la lista.
+        locales_qs = (
+            db.query(Local)
+            .join(Zona)
+            .filter(Zona.codigo.in_(zona_codigos))
+            .filter(Local.estado.in_(["Disponible", "Reservado", "Vendido"]))
+            .filter(Local.subnivel_de_id == None)
+            .options(
+                joinedload(Local.zona),
+                joinedload(Local.metraje),
+                subqueryload(Local.subniveles).joinedload(Local.zona),
+                subqueryload(Local.subniveles).joinedload(Local.metraje)
+            )
+            .all()
+        )
 
-        # 🔥 Manejo de subniveles
-        if local.subnivel_de:
-            for grupo in grupos_dict.values():
-                for l in grupo["locales"]:
-                    if l["zona_codigo"] == local.subnivel_de:
-                        l["subniveles"].append(local_data)
-                        break
-            continue
+        # Serializamos cada local (incluyendo sus subniveles, si existen)
+        serialized_locales = [serialize_local_with_subniveles(local) for local in locales_qs]
 
-        # 🔥 Agregar local al grupo correspondiente
-        if tipo not in grupos_dict:
-            grupos_dict[tipo] = {"tipo": tipo, "locales": []}
+        grupos_response.append({
+            "tipo": tipo,  # este valor se obtiene de local.tipo.value en tus registros, pero aquí lo definimos según el grupo
+            "locales": serialized_locales
+        })
 
-        grupos_dict[tipo]["locales"].append(local_data)
-
-    # 🔥 Convertir a lista y devolver
-    return ResponseGrupoLocales(grupos=list(grupos_dict.values()))
+    return {"grupos": grupos_response}
