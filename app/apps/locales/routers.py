@@ -13,7 +13,10 @@ from app.apps.locales.schemas import (
     ResponseGrupoLocales, GrupoLocalesSchema, LocalSchema
 )
 from app.apps.locales.models import Categoria, Zona, Metraje, Cliente, Local
-from app.apps.locales.utils import serialize_local, serialize_local_with_subniveles
+from app.apps.locales.utils import (
+    procesar_local_recursivo,
+    combinar_grupos_con_bd
+)
 
 router = APIRouter()
 
@@ -432,54 +435,1263 @@ def eliminar_local(local_id: int, db: Session = Depends(get_db)):
 
     return {"message": "Local eliminado correctamente"}
 
-@router.get("/grupos", response_model=ResponseGrupoLocales)
+
+
+@router.get("/grupos", response_model=dict)
 def get_grupos(db: Session = Depends(get_db)):
-    # Definición de grupos (cada grupo tiene un tipo y la lista de códigos de zona que lo integran)
-    grupos_definidos = [
-        {"tipo": "Entrada segundaria grupo 1 izquierda", "zona_codigos": ["PT 1", "PT 2", "PT 3", "PT 4", "PT 9", "PT 10", "PT 12", "PT 14"]},
-        {"tipo": "Entrada segundaria grupo 1 derecha", "zona_codigos": ["PT 5", "PT 6", "PT 7", "PT 8", "PT 15", "PT 16", "PT 18", "PT 20"]},
-        {"tipo": "Entrada segundaria grupo 2 izquierda", "zona_codigos": ["PT 21", "PT 22", "PT 23", "PT 24", "PT 25", "PT 26", "PT 33", "PT 34"]},
-        {"tipo": "Entrada segundaria grupo 2 derecha", "zona_codigos": ["PT 27", "PT 28", "PT 29", "PT 30", "PT 31", "PT 32", "PT 37", "PT 38", "PT 93", "PT 40"]},
-        {"tipo": "Entrada segundaria grupo 3 izquierda", "zona_codigos": ["PT 41", "PT 42", "PT 43", "PT 44", "PT 49", "PT 50", "PT 51", "PT 52", "PT 53", "PT 54"]},
-        {"tipo": "Entrada segundaria grupo 3 derecha", "zona_codigos": ["PT 45", "PT 46", "PT 47", "PT 48", "PT 55", "PT 56", "PT 47", "PT 58", "PT 59", "PT 60"]},
-        {"tipo": "Entrada segundaria grupo 4 izquierda", "zona_codigos": ["PT 61", "PT 62", "PT 63", "PT 64", "PT 65", "PT 66", "PT 73", "PT 74", "PT 75", "PT 76", "PT 77", "PT 78"]},
-        {"tipo": "Entrada segundaria grupo 4 derecha", "zona_codigos": ["PT 67", "PT 68", "PT 69", "PT 70", "PT 71", "PT 72", "PT 79", "PT 80", "PT 81", "PT 82", "PT 83", "PT 84"]},
-        {"tipo": "Entrada segundaria grupo 5 izquierda", "zona_codigos": ["PT 85", "PT 86", "PT 87", "PT 88", "PT 89", "PT 90", "PT 97", "PT 98", "PT 99", "PT 100"]},
-        {"tipo": "Entrada segundaria grupo 5 derecha", "zona_codigos": ["PT 91", "PT 92", "PT 93", "PT 94", "PT 95", "PT 96", "PT 101", "PT 102", "PT 103", "PT 104"]},
-        {"tipo": "Entrada grupo 1 larga", "zona_codigos": ["PT 105", "PT 106", "PT 107", "PT 108", "PT 109"]},
-        {"tipo": "Entrada grupo 2 larga", "zona_codigos": ["PT 110", "PT 111", "PT 112", "PT 113", "PT 114", "PT 115", "PT 116", "PT 117"]}
+
+    # Aquí copias tal cual tu estructura estática
+    grupos_estaticos = [
+        {
+            "tipo": "entrada segundaria grupo 1 izquierda",
+            "locales": [
+                {
+                    "zona_codigo": "PT 1",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 2",
+                    "precio": "$51,990",
+                    "estado": "Reservado",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 3",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 4",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 9",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 10",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 10",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 11",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 12",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 12",
+                            "precio": "$28,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 13",
+                            "precio": "$28,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 14",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 1 derecha",
+            "locales": [
+                {
+                    "zona_codigo": "PT 5",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 6",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 7",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 8",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 15",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 16",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 16",
+                            "precio": "$51,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 17",
+                            "precio": "$46,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 18",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 18",
+                            "precio": "$46,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 19",
+                            "precio": "$56,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 20",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 2 izquierda",
+            "locales": [
+                {
+                    "zona_codigo": "PT 21",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 22",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 22",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 23",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 24",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 24",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 25",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 26",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 33",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 34",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 35",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 360",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 2 derecha",
+            "locales": [
+                {
+                    "zona_codigo": "PT 27",
+                    "precio": "$56,990",
+                    "estado": "Reservado",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 28",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 28",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 29",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 30",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 30",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 31",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 32",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 37",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 38",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 39",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 40",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 3 izquierda",
+            "locales": [
+                {
+                    "zona_codigo": "PT 41",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 42",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 43",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 44",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 49",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 50",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 50",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 51",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 52",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 52",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 53",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 54",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 3 derecha",
+            "locales": [
+                {
+                    "zona_codigo": "PT 45",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 46",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 47",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 48",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 55",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 56",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 56",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 57",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 58",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 58",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 59",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 60",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 4 izquierda",
+            "locales": [
+                {
+                    "zona_codigo": "PT 61",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 62-63",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 62",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 63",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 64-65",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 64",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 65",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 66",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 73",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 74-75",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 74",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 75",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 76-77",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 76",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 77",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 78",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 4 derecha",
+            "locales": [
+                {
+                    "zona_codigo": "PT 67",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 68-69",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 68",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 69",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 70-71",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 70",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 71",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 72",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 79",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 80-81",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 80",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 81",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 82-83",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 82",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 83",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 84",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 5 izquierda",
+            "locales": [
+                {
+                    "zona_codigo": "PT 85",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 86-87",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 86",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 87",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "primera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 88-89",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 88",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 89",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 90",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 97",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 98",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "primera_linea"
+                },
+                {
+                    "zona_codigo": "PT 99",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 100",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada segundaria grupo 5 derecha",
+            "locales": [
+                {
+                    "zona_codigo": "PT 91",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 92-93",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 92",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 93",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "segunda_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 94-95",
+                    "subniveles": [
+                        {
+                            "zona_codigo": "PT 94",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        },
+                        {
+                            "zona_codigo": "PT 95",
+                            "precio": "$29,990",
+                            "estado": "Disponible",
+                            "area": "25 m²",
+                            "perimetro": "5x5",
+                            "image": "../assets/tipos_locales/mediano.png",
+                            "linea_base": "tercera_linea"
+                        }
+                    ]
+                },
+                {
+                    "zona_codigo": "PT 96",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 101",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 102",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "segunda_linea"
+                },
+                {
+                    "zona_codigo": "PT 103",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 104",
+                    "precio": "$28,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada grupo 1 larga",
+            "locales": [
+                {
+                    "zona_codigo": "PT 105",
+                    "altura":"h-[80px]",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 106",
+                    "altura":"h-[80px]",
+                    "precio": "$56,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 107",
+                    "altura":"h-[38px]",
+                    "precio": "$27,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 108",
+                    "altura":"h-[80px]",
+                    "precio": "$27,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 109",
+                    "altura":"h-[80px]",
+                    "precio": "$27,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                }
+            ]
+        },
+        {
+            "tipo": "entrada grupo 2 larga",
+            "locales": [
+                {
+                    "zona_codigo": "PT 110",
+                    "altura":"h-[80px]",
+                    "precio": "$51,990",
+                    "estado": "Vendido",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 111",
+                    "altura":"h-[80px]",
+                    "precio": "$46,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 112",
+                    "altura":"h-[38px]",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 113",
+                    "altura":"h-[80px]",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 114",
+                    "altura":"h-[80px]",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 115",
+                    "altura":"h-[38px]",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 116",
+                    "altura":"h-[80px]",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                },
+                {
+                    "zona_codigo": "PT 117",
+                    "altura":"h-[80px]",
+                    "precio": "$51,990",
+                    "estado": "Disponible",
+                    "area": "25 m²",
+                    "perimetro": "5x5",
+                    "image": "../assets/tipos_locales/mediano.png",
+                    "linea_base": "tercera_linea"
+                }
+            ]
+        }
+        
     ]
 
-    grupos_response = []
+    grupos_final = combinar_grupos_con_bd(db, grupos_estaticos)
+    return {"grupos": grupos_final}
 
-    # Para cada grupo definido se consulta en la BD:
-    for grupo_def in grupos_definidos:
-        tipo = grupo_def["tipo"]
-        zona_codigos = grupo_def["zona_codigos"]
 
-        # Se filtran solo los locales principales (donde subnivel_de_id es None)
-        # cuya zona tenga un código en la lista.
-        locales_qs = (
-            db.query(Local)
-            .join(Zona)
-            .filter(Zona.codigo.in_(zona_codigos))
-            .filter(Local.estado.in_(["Disponible", "Reservado", "Vendido"]))
-            .filter(Local.subnivel_de_id == None)
-            .options(
-                joinedload(Local.zona),
-                joinedload(Local.metraje),
-                subqueryload(Local.subniveles).joinedload(Local.zona),
-                subqueryload(Local.subniveles).joinedload(Local.metraje)
-            )
-            .all()
-        )
 
-        # Serializamos cada local (incluyendo sus subniveles, si existen)
-        serialized_locales = [serialize_local_with_subniveles(local) for local in locales_qs]
 
-        grupos_response.append({
-            "tipo": tipo,  # este valor se obtiene de local.tipo.value en tus registros, pero aquí lo definimos según el grupo
-            "locales": serialized_locales
-        })
 
-    return {"grupos": grupos_response}
+
+
