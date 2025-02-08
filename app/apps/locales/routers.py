@@ -1687,7 +1687,7 @@ def get_grupos(db: Session = Depends(get_db)):
     ]
 
     grupos_final = combinar_grupos_con_bd(db, grupos_estaticos)
-    return {"grupos": grupos_final}
+    return {"grupos": grupos_final} 
 
 
 
